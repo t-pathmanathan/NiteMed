@@ -1,4 +1,16 @@
+/*
+Things To Do:
+- Integrate ScrollView so that keyboard does not cover input fields.
+- Implement Password and Confirm Password fields to use secureTextEntry. (Done)
+- Implement Password and Confirm Password fields to validate matching passwords.
+- Implement Show/Hide Password functionality. (Done)
+- Implement Email field to validate proper email format.
+- Implement Register Button to not be active unless all fields are filled and valid.
+
+*/
+
 import MainButton from "@/components/MainButton";
+import PasswordInput from "@/components/PasswordInput";
 import { Checkbox } from "expo-checkbox";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
@@ -6,6 +18,8 @@ import { FONTS } from "../theme";
 
 export default function RegistrationScreen() {
   const [role, setRole] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   return (
     <View style={styles.container}>
@@ -15,10 +29,13 @@ export default function RegistrationScreen() {
       <Text style={styles.label}>Email</Text>
       <TextInput style={styles.input} autoCapitalize="none" />
       <Text style={styles.label}>Password</Text>
-      <TextInput style={styles.input} />
+      <PasswordInput value={password} onChangeText={setPassword} />
       <Text style={styles.label}>Confirm Password</Text>
-      <TextInput style={styles.input} />
-      <Text style={styles.label}>Who are you?</Text>
+      <PasswordInput
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+      />
+
       <View style={styles.checkboxSection}>
         <Checkbox
           style={styles.checkbox}
@@ -28,6 +45,7 @@ export default function RegistrationScreen() {
         />
         <Text style={styles.checkboxLabel}>I take medication</Text>
       </View>
+
       <View style={styles.checkboxSection}>
         <Checkbox
           style={styles.checkbox}
@@ -37,6 +55,7 @@ export default function RegistrationScreen() {
         />
         <Text style={styles.checkboxLabel}>I track others' medication</Text>
       </View>
+
       <View style={styles.buttonContainer}>
         <MainButton title="Register" onPress={() => {}} />
       </View>
