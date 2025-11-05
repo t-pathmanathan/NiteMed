@@ -90,6 +90,6 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   buttonContainer: {
-    marginTop: 100,
+    marginTop: 80,
   },
 });
