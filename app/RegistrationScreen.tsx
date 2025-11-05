@@ -1,11 +1,12 @@
 import LabeledGeneralInput from "@/components/LabeledGeneralInput";
 import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import MainButton from "@/components/MainButton";
+import { StrengthLevel } from "@/components/PasswordStrengthIndicator";
 import RoleSelector from "@/components/RoleSelector";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { FONTS } from "../theme";
+import { COLORS, FONTS } from "../theme";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -15,10 +16,13 @@ export default function RegistrationScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordStrength, setPasswordStrength] =
+    useState<StrengthLevel>("Weak");
 
   const isFormValid =
     fullName.trim().length > 0 &&
     emailRegex.test(email) &&
+    passwordStrength === "Strong" &&
     password.length > 0 &&
     confirmPassword.length > 0 &&
     password === confirmPassword &&
@@ -49,6 +53,8 @@ export default function RegistrationScreen() {
         label="Password"
         value={password}
         onChangeText={setPassword}
+        showStrengthIndicator={true}
+        onStrengthChange={setPasswordStrength}
       />
       <LabeledPasswordInput
         label="Confirm Password"
@@ -70,7 +76,7 @@ export default function RegistrationScreen() {
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
-    backgroundColor: "#FD1101",
+    backgroundColor: COLORS.primary,
   },
   container: {
     alignItems: "center",
@@ -79,7 +85,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 48,
     fontFamily: FONTS.poppins,
-    color: "white",
+    color: COLORS.white,
     marginBottom: 40,
     marginTop: 50,
   },

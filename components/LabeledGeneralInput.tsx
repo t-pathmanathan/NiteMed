@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { FONTS } from "../theme";
+import { COLORS, FONTS } from "../theme";
 
 type LabeledInputProps = {
   label: string;
@@ -9,7 +9,7 @@ type LabeledInputProps = {
   autocapitalize?: "none" | "sentences" | "words" | "characters";
 };
 
-export default function LabeledInput({
+export default function LabeledGeneralInput({
   label,
   value,
   onChangeText,
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     fontSize: 16,
     fontFamily: FONTS.poppins,
-    color: "white",
+    color: COLORS.white,
     marginBottom: 1,
   },
   input: {
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-    color: "white",
+    color: COLORS.white,
     fontSize: 16,
     fontFamily: FONTS.poppins,
   },
