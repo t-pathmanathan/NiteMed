@@ -8,18 +8,25 @@ export default function MainButton({
   onPress,
   backgroundColor = COLORS.white,
   textColor = COLORS.black,
+  disabled = false,
 }: {
   title: string;
   onPress?: () => void;
   backgroundColor?: string;
   textColor?: string;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
-      style={[styles.mainButton, { backgroundColor }]}
-      onPress={onPress}
+      onPress={!disabled ? onPress : undefined}
       accessibilityRole="button"
       accessibilityLabel={`${title} Button`}
+      style={({ pressed }) => [
+        styles.mainButton,
+        { backgroundColor },
+        disabled && styles.disabledButton,
+        pressed && !disabled && styles.pressed,
+      ]}
     >
       <Text style={[styles.mainButtonText, { color: textColor }]}>{title}</Text>
     </Pressable>
@@ -39,5 +46,11 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontFamily: FONTS.poppins,
     paddingVertical: 8,
+  },
+  disabledButton: {
+    opacity: 0.4, // visually show disabled state
+  },
+  pressed: {
+    opacity: 0.75, // tap feedback only when active
   },
 });
