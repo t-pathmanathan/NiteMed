@@ -3,19 +3,21 @@ import { COLORS, FONTS } from "../theme";
 
 const { width } = Dimensions.get("window");
 
+type MainButtonProps = {
+  title: string;
+  onPress?: () => void;
+  backgroundColor?: string;
+  textColor?: string;
+  disabled?: boolean;
+};
+
 export default function MainButton({
   title,
   onPress,
   backgroundColor = COLORS.white,
   textColor = COLORS.black,
   disabled = false,
-}: {
-  title: string;
-  onPress?: () => void;
-  backgroundColor?: string;
-  textColor?: string;
-  disabled?: boolean;
-}) {
+}: MainButtonProps) {
   return (
     <Pressable
       onPress={!disabled ? onPress : undefined}
@@ -48,9 +50,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   disabledButton: {
-    opacity: 0.4, // visually show disabled state
+    opacity: 0.4,
   },
   pressed: {
-    opacity: 0.75, // tap feedback only when active
+    opacity: 0.75,
   },
 });

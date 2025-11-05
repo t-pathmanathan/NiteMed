@@ -1,22 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { FONTS } from "../theme";
 
 type PasswordInputProps = {
+  label: string;
   value: string;
   onChangeText: (text: string) => void;
 };
 
 export default function PasswordInput({
+  label,
   value,
   onChangeText,
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
-    <View style={{ width: "100%" }}>
-      <View style={styles.passwordContainer}>
+    <View style={styles.container}>
+      <Text style={styles.inputLabel}>{label}</Text>
+
+      <View style={styles.inputWrapper}>
         <TextInput
           style={styles.input}
           secureTextEntry={!visible}
@@ -43,12 +47,23 @@ export default function PasswordInput({
 }
 
 const styles = StyleSheet.create({
-  passwordContainer: {
+  container: {
     width: "90%",
-    height: 50,
     marginBottom: 30,
-    position: "relative",
     alignSelf: "center",
+  },
+  inputLabel: {
+    alignSelf: "flex-start",
+    fontSize: 16,
+    fontFamily: FONTS.poppins,
+    color: "white",
+    marginBottom: 1,
+  },
+  inputWrapper: {
+    width: "100%",
+    height: 50,
+    borderRadius: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
   },
   input: {
@@ -56,7 +71,7 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 10,
     paddingHorizontal: 10,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingRight: 45,
     color: "white",
     fontSize: 16,
     fontFamily: FONTS.poppins,

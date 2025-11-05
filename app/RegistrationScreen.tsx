@@ -1,10 +1,13 @@
+import LabeledGeneralInput from "@/components/LabeledGeneralInput";
+import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import MainButton from "@/components/MainButton";
-import PasswordInput from "@/components/PasswordInput";
-import { Checkbox } from "expo-checkbox";
+import RoleSelector from "@/components/RoleSelector";
 import { useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { FONTS } from "../theme";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegistrationScreen() {
   const [role, setRole] = useState<string | null>(null);
@@ -12,8 +15,6 @@ export default function RegistrationScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const isFormValid =
     fullName.trim().length > 0 &&
@@ -32,49 +33,29 @@ export default function RegistrationScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.screenTitle}>Registration</Text>
-      <Text style={styles.label}>Full Name</Text>
-      <TextInput
-        style={styles.input}
-        autoCapitalize="words"
+      <LabeledGeneralInput
+        label="Full Name"
         value={fullName}
         onChangeText={setFullName}
+        autocapitalize="words"
       />
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="email-address"
+      <LabeledGeneralInput
+        label="Email"
         value={email}
         onChangeText={setEmail}
+        keyboardType="email-address"
       />
-      <Text style={styles.label}>Password</Text>
-      <PasswordInput value={password} onChangeText={setPassword} />
-      <Text style={styles.label}>Confirm Password</Text>
-      <PasswordInput
+      <LabeledPasswordInput
+        label="Password"
+        value={password}
+        onChangeText={setPassword}
+      />
+      <LabeledPasswordInput
+        label="Confirm Password"
         value={confirmPassword}
         onChangeText={setConfirmPassword}
       />
-      <Text style={styles.label}>Who are you?</Text>
-      <View style={styles.checkboxSection}>
-        <Checkbox
-          style={styles.checkbox}
-          value={role === "takesMeds"}
-          onValueChange={() => setRole("takesMeds")}
-          color={role === "takesMeds" ? "#FD1101" : undefined}
-        />
-        <Text style={styles.checkboxLabel}>I take medication</Text>
-      </View>
-
-      <View style={styles.checkboxSection}>
-        <Checkbox
-          style={styles.checkbox}
-          value={role === "tracksMeds"}
-          onValueChange={() => setRole("tracksMeds")}
-          color={role === "tracksMeds" ? "#FD1101" : undefined}
-        />
-        <Text style={styles.checkboxLabel}>I track others' medication</Text>
-      </View>
-
+      <RoleSelector role={role} setRole={setRole} />
       <View style={styles.buttonContainer}>
         <MainButton
           title="Register"
@@ -93,7 +74,7 @@ const styles = StyleSheet.create({
   },
   container: {
     alignItems: "center",
-    paddingBottom: 80, // allows scrolling above keyboard
+    paddingBottom: 80,
   },
   screenTitle: {
     fontSize: 48,
@@ -101,40 +82,6 @@ const styles = StyleSheet.create({
     color: "white",
     marginBottom: 40,
     marginTop: 50,
-  },
-  label: {
-    alignSelf: "flex-start",
-    marginLeft: 25,
-    fontSize: 16,
-    fontFamily: FONTS.poppins,
-    color: "white",
-    marginBottom: 1,
-  },
-  input: {
-    width: "90%",
-    height: 50,
-    borderRadius: 10,
-    marginBottom: 30,
-    paddingHorizontal: 10,
-    textAlignVertical: "bottom",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    color: "white",
-    fontSize: 16,
-    fontFamily: FONTS.poppins,
-  },
-  checkboxSection: {
-    flexDirection: "row",
-    alignSelf: "flex-start",
-    marginLeft: 25,
-    marginBottom: 5,
-  },
-  checkbox: {
-    borderColor: "white",
-  },
-  checkboxLabel: {
-    marginLeft: 8,
-    color: "white",
-    fontFamily: FONTS.poppins,
   },
   buttonContainer: {
     marginTop: 100,
