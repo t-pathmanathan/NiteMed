@@ -1,0 +1,61 @@
+import { Checkbox } from "expo-checkbox";
+import { StyleSheet, Text, View } from "react-native";
+import { FONTS } from "../theme";
+
+type RoleSelectorProps = {
+  role: string | null;
+  setRole: (role: string) => void;
+};
+
+export default function RoleSelector({ role, setRole }: RoleSelectorProps) {
+  return (
+    <>
+      <Text style={styles.label}>Who are you?</Text>
+
+      <View style={styles.checkboxSection}>
+        <Checkbox
+          style={styles.checkbox}
+          value={role === "takesMeds"}
+          onValueChange={() => setRole("takesMeds")}
+          color={role === "takesMeds" ? "#FD1101" : undefined}
+        />
+        <Text style={styles.checkboxLabel}>I take medication</Text>
+      </View>
+
+      <View style={styles.checkboxSection}>
+        <Checkbox
+          style={styles.checkbox}
+          value={role === "tracksMeds"}
+          onValueChange={() => setRole("tracksMeds")}
+          color={role === "tracksMeds" ? "#FD1101" : undefined}
+        />
+        <Text style={styles.checkboxLabel}>I track others' medication</Text>
+      </View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  label: {
+    alignSelf: "flex-start",
+    marginLeft: 25,
+    fontSize: 16,
+    fontFamily: FONTS.poppins,
+    color: "white",
+    marginBottom: 1,
+  },
+  checkboxSection: {
+    flexDirection: "row",
+    alignSelf: "flex-start",
+    marginLeft: 25,
+    marginBottom: 5,
+  },
+  checkbox: {
+    borderColor: "white",
+  },
+  checkboxLabel: {
+    marginLeft: 8,
+    color: "white",
+    fontFamily: FONTS.poppins,
+  },
+});
