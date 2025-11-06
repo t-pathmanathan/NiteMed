@@ -14,10 +14,12 @@ export default function RootLayout() {
   return (
     <Stack>
       {/* <Stack.Screen name="StartScreen" options={{ headerShown: false }} /> */}
-      <Stack.Screen
+      {/* <Stack.Screen
         name="RegistrationScreen"
         options={{ headerShown: false }}
       />
+    </Stack> */}
+      <Stack.Screen name="LoginScreen" options={{ headerShown: false }} />
     </Stack>
   );
 }
