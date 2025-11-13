@@ -40,8 +40,7 @@ export default function SlideToSend({ onSlideComplete }: SlideToSendProps) {
     "\n" +
     "Please slide to confirm.";
 
-  const confirmationMessage =
-    "Thank you for checking in!" + "\n" + "You have taken your medication.";
+  const confirmationMessage = "Thank you for checking in!";
 
   useEffect(() => {
     let i = 0;
@@ -225,10 +224,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.poppins,
     textAlign: "center",
     lineHeight: 60,
+    marginBottom: 200,
   },
   sliderContainer: {
     position: "absolute",
-    bottom: 90,
+    bottom: 200,
     width: "100%",
     alignItems: "center",
   },
