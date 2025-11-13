@@ -1,11 +1,8 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet } from "react-native";
+import SlideToSend from "../../components/SlideToSend";
 
 export default function HomeScreen() {
-  return (
-    <View>
-      <Text>Home</Text>
-    </View>
-  );
+  return <SlideToSend />;
 }
 
 const styles = StyleSheet.create({});
