@@ -18,7 +18,8 @@ export default function RootLayout() {
         name="RegistrationScreen"
         options={{ headerShown: false }}
       /> */}
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/* <Stack.Screen name="sender/(tabs)" options={{ headerShown: false }} /> */}
+      <Stack.Screen name="receiver/(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
 }

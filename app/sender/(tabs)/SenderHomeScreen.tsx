@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import SlideToSend from "../../components/SlideToSend";
+import SlideToSend from "../../../components/SlideToSend";
 
 export default function HomeScreen() {
   return <SlideToSend />;
