@@ -36,7 +36,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="HomeScreen"
+        name="ReceiverHomeScreen"
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
@@ -50,7 +50,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="SettingsScreen"
+        name="ReceiverSettingsScreen"
         options={{
           title: "Settings",
           tabBarIcon: ({ color, focused }) => (
