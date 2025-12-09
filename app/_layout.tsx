@@ -17,9 +17,9 @@ export default function RootLayout() {
       {/* <Stack.Screen
         name="RegistrationScreen"
         options={{ headerShown: false }}
-      />
-    </Stack> */}
-      <Stack.Screen name="LoginScreen" options={{ headerShown: false }} />
+      /> */}
+      {/* <Stack.Screen name="sender/(tabs)" options={{ headerShown: false }} /> */}
+      <Stack.Screen name="receiver/(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
 }
