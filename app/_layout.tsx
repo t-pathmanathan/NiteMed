@@ -1,6 +1,11 @@
 import { Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
+import { Amplify } from "aws-amplify";
 import { Stack } from "expo-router";
 import { Text } from "react-native";
+
+import outputs from "../amplify_outputs.json";
+
+Amplify.configure(outputs);
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -12,14 +17,12 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack>
-      {/* <Stack.Screen name="StartScreen" options={{ headerShown: false }} /> */}
-      {/* <Stack.Screen
+    <Stack initialRouteName="RegistrationScreen">
+      <Stack.Screen
         name="RegistrationScreen"
         options={{ headerShown: false }}
-      /> */}
-      {/* <Stack.Screen name="sender/(tabs)" options={{ headerShown: false }} /> */}
-      <Stack.Screen name="receiver/(tabs)" options={{ headerShown: false }} />
+      />
+      <Stack.Screen name="LoginScreen" options={{ headerShown: false }} />
     </Stack>
   );
 }

@@ -1,0 +1,18 @@
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "input_fullName"
+- inputText: "Thilochan Pathmanathan"
+- tapOn:
+    id: "input_email"
+- inputText: "thilochan@gmail.com"
+- tapOn:
+    id: "input_password"
+- inputText: "StrongPass123!"
+- tapOn:
+    id: "input_confirmPassword"
+- inputText: "StrongPass123!"
+- tapOn:
+    id: "role_takesMeds"
+- tapOn:
+    id: "btn_register"

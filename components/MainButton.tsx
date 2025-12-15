@@ -9,6 +9,7 @@ type MainButtonProps = {
   backgroundColor?: string;
   textColor?: string;
   disabled?: boolean;
+  testID?: string;
 };
 
 export default function MainButton({
@@ -17,9 +18,11 @@ export default function MainButton({
   backgroundColor = COLORS.white,
   textColor = COLORS.black,
   disabled = false,
+  testID,
 }: MainButtonProps) {
   return (
     <Pressable
+      testID={testID}
       onPress={!disabled ? onPress : undefined}
       accessibilityRole="button"
       accessibilityLabel={`${title} Button`}

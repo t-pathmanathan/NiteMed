@@ -7,6 +7,7 @@ type LabeledInputProps = {
   onChangeText: (text: string) => void;
   keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
   autocapitalize?: "none" | "sentences" | "words" | "characters";
+  testID?: string;
 };
 
 export default function LabeledGeneralInput({
@@ -15,6 +16,7 @@ export default function LabeledGeneralInput({
   onChangeText,
   keyboardType = "default",
   autocapitalize = "none",
+  testID,
 }: LabeledInputProps) {
   return (
     <View style={styles.container}>
@@ -25,6 +27,7 @@ export default function LabeledGeneralInput({
         value={value}
         onChangeText={onChangeText}
         keyboardType={keyboardType}
+        testID={testID}
       />
     </View>
   );
