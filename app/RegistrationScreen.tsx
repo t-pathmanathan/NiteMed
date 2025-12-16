@@ -45,8 +45,10 @@ export default function RegistrationScreen() {
         role,
       });
 
-      Alert.alert("Success", "Account created successfully!");
-      router.push("/LoginScreen");
+      router.push({
+        pathname: "/VerifyScreen",
+        params: { email },
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Sign-up failed";
       Alert.alert("Error", message);
