@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test:e2e": "maestro test e2e/flow_registration.yaml"
+    "test:registration": "maestro test e2e/flow_registration.yaml",
+    "test:login": "maestro test e2e/flow_login.yaml"
   },
   "dependencies": {
     "@aws-amplify/react-native": "^1.3.1",
@@ -25,6 +26,7 @@
     "expo": "~54.0.29",
     "expo-checkbox": "~5.0.8",
     "expo-constants": "~18.0.10",
+    "expo-dev-client": "~6.0.20",
     "expo-font": "~14.0.9",
     "expo-haptics": "~15.0.8",
     "expo-image": "~3.0.11",

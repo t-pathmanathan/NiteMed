@@ -1,5 +1,5 @@
-import { confirmSignUpApi, resendCodeApi } from "@/src/api/authApi";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { forgotPasswordApi } from "@/src/api/authApi";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -12,42 +12,30 @@ import {
   View,
 } from "react-native";
 
-export default function VerifyScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email: string }>();
-  const email = params.email;
-
-  const [code, setCode] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleVerify = async () => {
-    if (!code || code.length !== 6) {
-      Alert.alert("Invalid Code", "Please enter the 6-digit code.");
+  const handleSendCode = async () => {
+    if (!email) {
+      Alert.alert("Missing Email", "Please enter your email address.");
       return;
     }
 
     setLoading(true);
     try {
-      await confirmSignUpApi(email, code);
-      Alert.alert("Success", "Email verified!");
-      router.replace("/LoginScreen"); // prevent back navigation
-    } catch (err: any) {
-      Alert.alert("Verification Failed", err.message || "Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    setLoading(true);
-    try {
-      await resendCodeApi(email);
+      await forgotPasswordApi({ email });
       Alert.alert(
         "Code Sent",
-        "A new verification code has been sent to your email."
+        "A password reset code has been sent to your email."
       );
+      router.push({
+        pathname: "/ResetPasswordScreen",
+        params: { email },
+      });
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Could not resend code.");
+      Alert.alert("Error", err.message || "Failed to send reset code.");
     } finally {
       setLoading(false);
     }
@@ -59,34 +47,30 @@ export default function VerifyScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>Verify Your Account</Text>
+        <Text style={styles.title}>Forgot Password</Text>
 
         <Text style={styles.subtitle}>
-          Enter the 6-digit code sent to your email
+          Enter your email to receive a reset code
         </Text>
 
         <TextInput
-          value={code}
-          onChangeText={setCode}
-          keyboardType="number-pad"
-          maxLength={6}
-          placeholder="● ● ● ● ● ●"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="Email address"
           placeholderTextColor="#999"
+          keyboardType="email-address"
+          autoCapitalize="none"
           style={styles.input}
         />
 
         <TouchableOpacity
-          style={styles.verifyButton}
-          onPress={handleVerify}
+          style={styles.primaryButton}
+          onPress={handleSendCode}
           disabled={loading}
         >
-          <Text style={styles.verifyButtonText}>
-            {loading ? "Verifying..." : "Verify"}
+          <Text style={styles.primaryButtonText}>
+            {loading ? "Sending..." : "Send Code"}
           </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleResend} disabled={loading}>
-          <Text style={styles.resendText}>Resend code</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -125,29 +109,33 @@ const styles = StyleSheet.create({
     borderColor: "#000",
     borderRadius: 10,
     paddingVertical: 14,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    color: "#000",
+  },
+  codeInput: {
+    borderWidth: 1.5,
+    borderColor: "#000",
+    borderRadius: 10,
+    paddingVertical: 14,
     fontSize: 20,
     textAlign: "center",
     letterSpacing: 10,
     marginBottom: 20,
     color: "#000",
   },
-  verifyButton: {
+  primaryButton: {
     backgroundColor: PRIMARY_RED,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  verifyButtonText: {
+  primaryButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
-  },
-  resendText: {
-    textAlign: "center",
-    color: PRIMARY_RED,
-    fontSize: 14,
-    fontWeight: "600",
   },
 });

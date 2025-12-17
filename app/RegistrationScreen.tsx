@@ -3,14 +3,13 @@ import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import MainButton from "@/components/MainButton";
 import { StrengthLevel } from "@/components/PasswordStrengthIndicator";
 import RoleSelector from "@/components/RoleSelector";
+import { signUpApi } from "@/src/api/authApi";
+import { emailRegex } from "@/src/utils/validators";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { COLORS, FONTS } from "../theme";
-
-import { registerUser } from "@/src/services/authService";
-import { emailRegex } from "@/src/utils/validators";
 
 export default function RegistrationScreen() {
   const router = useRouter();
@@ -38,7 +37,7 @@ export default function RegistrationScreen() {
 
     setLoading(true);
     try {
-      await registerUser({
+      await signUpApi({
         email,
         password,
         fullName,

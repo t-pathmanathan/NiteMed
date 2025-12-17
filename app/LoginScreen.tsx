@@ -1,17 +1,50 @@
 import LabeledGeneralInput from "@/components/LabeledGeneralInput";
 import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import MainButton from "@/components/MainButton";
+import { signInApi } from "@/src/api/authApi";
+import { fetchUserAttributes } from "@aws-amplify/auth";
+import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { COLORS, FONTS } from "../theme";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const isFormValid = emailRegex.test(email) && password.length > 0;
+
+  const handleSignIn = async () => {
+    if (!isFormValid) return;
+
+    setLoading(true);
+    try {
+      await signInApi({
+        email,
+        password,
+      });
+
+      const attributes = await fetchUserAttributes();
+      const role = attributes["custom:role"];
+
+      if (role === "takesMeds") {
+        router.push("/sender/(tabs)/SenderHomeScreen");
+      } else if (role === "tracksMeds") {
+        router.push("/receiver/(tabs)/ReceiverHomeScreen");
+      } else {
+        throw new Error("Missing user role");
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Sign-in failed";
+      Alert.alert("Error", message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -21,17 +54,33 @@ export default function LoginScreen() {
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
+        testID="input_email"
       />
       <LabeledPasswordInput
         label="Password"
         value={password}
         onChangeText={setPassword}
+        testID="input_password"
       />
-      <Pressable style={styles.forgotPasswordContainer} onPress={() => {}}>
+      <Pressable
+        style={styles.forgotPasswordContainer}
+        onPress={() =>
+          router.push({
+            pathname: "/ForgotPasswordScreen",
+            params: email ? { email } : undefined,
+          })
+        }
+      >
         <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
       </Pressable>
+
       <View style={styles.buttonContainer}>
-        <MainButton title="Login" onPress={() => {}} disabled={!isFormValid} />
+        <MainButton
+          title={loading ? "Logging In..." : "Login"}
+          onPress={handleSignIn}
+          disabled={!isFormValid || loading}
+          testID="btn_login"
+        />
       </View>
     </View>
   );
