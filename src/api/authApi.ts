@@ -28,6 +28,26 @@ export const signUpApi = async ({
   });
 };
 
+export type ConfirmSignUpInput = {
+  email: string;
+  code: string;
+};
+
+export const confirmSignUpApi = async ({ email, code }: ConfirmSignUpInput) => {
+  return confirmSignUp({
+    username: email,
+    confirmationCode: code,
+  });
+};
+
+export type ResendSignUpCodeInput = {
+  email: string;
+};
+
+export const resendCodeApi = async ({ email }: ResendSignUpCodeInput) => {
+  return resendSignUpCode({ username: email });
+};
+
 export type SignInInput = {
   email: string;
   password: string;
@@ -38,21 +58,6 @@ export const signInApi = async ({ email, password }: SignInInput) => {
     username: email,
     password,
   });
-};
-
-export const signOutApi = async () => {
-  return signOut();
-};
-
-export const confirmSignUpApi = async (email: string, code: string) => {
-  return confirmSignUp({
-    username: email,
-    confirmationCode: code,
-  });
-};
-
-export const resendCodeApi = async (email: string) => {
-  return resendSignUpCode({ username: email });
 };
 
 export type ForgotPasswordInput = {
@@ -79,4 +84,8 @@ export const confirmForgotPasswordApi = async ({
     confirmationCode: code,
     newPassword,
   });
+};
+
+export const signOutApi = async () => {
+  return signOut();
 };

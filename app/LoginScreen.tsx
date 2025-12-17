@@ -8,6 +8,8 @@ import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { COLORS, FONTS } from "../theme";
 
+import * as SecureStore from "expo-secure-store";
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
@@ -27,6 +29,8 @@ export default function LoginScreen() {
         email,
         password,
       });
+
+      await SecureStore.setItemAsync("hasSignedInBefore", "true");
 
       const attributes = await fetchUserAttributes();
       const role = attributes["custom:role"];

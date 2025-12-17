@@ -17,12 +17,13 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack initialRouteName="RegistrationScreen">
-      <Stack.Screen
-        name="RegistrationScreen"
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen name="LoginScreen" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="StartScreen" />
+      <Stack.Screen name="LoginScreen" />
+      <Stack.Screen name="RegistrationScreen" />
+      <Stack.Screen name="ForgotPasswordScreen" />
+      <Stack.Screen name="ResetPasswordScreen" />
+      <Stack.Screen name="VerifyScreen" />
     </Stack>
   );
 }

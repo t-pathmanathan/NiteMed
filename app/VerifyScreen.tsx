@@ -28,7 +28,7 @@ export default function VerifyScreen() {
 
     setLoading(true);
     try {
-      await confirmSignUpApi(email, code);
+      await confirmSignUpApi({ email, code });
       Alert.alert("Success", "Email verified!");
       router.replace("/LoginScreen"); // prevent back navigation
     } catch (err: any) {
@@ -41,7 +41,7 @@ export default function VerifyScreen() {
   const handleResend = async () => {
     setLoading(true);
     try {
-      await resendCodeApi(email);
+      await resendCodeApi({ email });
       Alert.alert(
         "Code Sent",
         "A new verification code has been sent to your email."
