@@ -5,6 +5,7 @@ import { FONTS } from "../theme";
 type RoleSelectorProps = {
   role: string | null;
   setRole: (role: string) => void;
+  testID?: string;
 };
 
 export default function RoleSelector({ role, setRole }: RoleSelectorProps) {
@@ -18,6 +19,7 @@ export default function RoleSelector({ role, setRole }: RoleSelectorProps) {
           value={role === "takesMeds"}
           onValueChange={() => setRole("takesMeds")}
           color={role === "takesMeds" ? "#FD1101" : undefined}
+          testID="role_takesMeds"
         />
         <Text style={styles.checkboxLabel}>I take medication</Text>
       </View>
@@ -28,6 +30,7 @@ export default function RoleSelector({ role, setRole }: RoleSelectorProps) {
           value={role === "tracksMeds"}
           onValueChange={() => setRole("tracksMeds")}
           color={role === "tracksMeds" ? "#FD1101" : undefined}
+          testID="role_tracksMeds"
         />
         <Text style={styles.checkboxLabel}>I track others' medication</Text>
       </View>

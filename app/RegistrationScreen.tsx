@@ -3,14 +3,17 @@ import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import MainButton from "@/components/MainButton";
 import { StrengthLevel } from "@/components/PasswordStrengthIndicator";
 import RoleSelector from "@/components/RoleSelector";
+import { signUpApi } from "@/src/api/authApi";
+import { emailRegex } from "@/src/utils/validators";
+import { useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { COLORS, FONTS } from "../theme";
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export default function RegistrationScreen() {
+  const router = useRouter();
+
   const [role, setRole] = useState<string | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,6 +21,7 @@ export default function RegistrationScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordStrength, setPasswordStrength] =
     useState<StrengthLevel>("Weak");
+  const [loading, setLoading] = useState(false);
 
   const isFormValid =
     fullName.trim().length > 0 &&
@@ -28,45 +32,80 @@ export default function RegistrationScreen() {
     password === confirmPassword &&
     role !== null;
 
+  const handleSignUp = async () => {
+    if (!isFormValid || !role) return;
+
+    setLoading(true);
+    try {
+      await signUpApi({
+        email,
+        password,
+        fullName,
+        role,
+      });
+
+      router.push({
+        pathname: "/VerifyScreen",
+        params: { email },
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Sign-up failed";
+      Alert.alert("Error", message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAwareScrollView
       style={styles.scroll}
       contentContainerStyle={styles.container}
-      enableOnAndroid={true}
+      enableOnAndroid
       extraScrollHeight={20}
       keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.screenTitle}>Registration</Text>
+
       <LabeledGeneralInput
         label="Full Name"
         value={fullName}
         onChangeText={setFullName}
         autocapitalize="words"
+        testID="input_fullName"
       />
+
       <LabeledGeneralInput
         label="Email"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
+        testID="input_email"
       />
+
       <LabeledPasswordInput
         label="Password"
         value={password}
         onChangeText={setPassword}
-        showStrengthIndicator={true}
+        showStrengthIndicator
         onStrengthChange={setPasswordStrength}
+        testID="input_password"
       />
+
       <LabeledPasswordInput
         label="Confirm Password"
         value={confirmPassword}
         onChangeText={setConfirmPassword}
+        testID="input_confirmPassword"
       />
+
       <RoleSelector role={role} setRole={setRole} />
+
       <View style={styles.buttonContainer}>
         <MainButton
-          title="Register"
-          onPress={() => {}}
-          disabled={!isFormValid}
+          title={loading ? "Registering..." : "Register"}
+          onPress={handleSignUp}
+          disabled={!isFormValid || loading}
+          testID="btn_register"
         />
       </View>
     </KeyboardAwareScrollView>

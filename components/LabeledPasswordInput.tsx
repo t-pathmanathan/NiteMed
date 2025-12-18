@@ -12,6 +12,7 @@ type PasswordInputProps = {
   onChangeText: (text: string) => void;
   showStrengthIndicator?: boolean;
   onStrengthChange?: (strength: StrengthLevel) => void;
+  testID?: string;
 };
 
 const getStrength = (password: string): StrengthLevel => {
@@ -38,6 +39,7 @@ export default function LabeledPasswordInput({
   onChangeText,
   showStrengthIndicator = false,
   onStrengthChange,
+  testID,
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -67,6 +69,7 @@ export default function LabeledPasswordInput({
             }
           }}
           autoCapitalize="none"
+          testID={testID}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         />
