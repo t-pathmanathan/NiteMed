@@ -1,6 +1,8 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
-import React, { useState } from "react";
+import { fetchAuthSession, signOut } from "aws-amplify/auth";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react"; // ✅ NEW
 import {
   Pressable,
   SectionList,
@@ -27,10 +29,8 @@ type SettingItem =
   | { type: "deleteAccount" }
   | { type: "linkCodeCard" }
   | { type: "toggleNotifications" }
-  | { type: "appVersion" }
-  | { type: "privacyPolicy" }
-  | { type: "termsOfService" }
-  | Receiver; // For Registered Receivers section
+  | { type: "signOut" }
+  | Receiver;
 
 type SettingsSection = {
   title: string;
@@ -44,10 +44,68 @@ type SettingsSection = {
 export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
+  // ✅ NEW — state for link code
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [loadingLinkCode, setLoadingLinkCode] = useState(true);
+
   const receivers: Receiver[] = [
     { id: 1, name: "Receiver 1", status: "active" },
     { id: 2, name: "Receiver 2", status: "inactive" },
   ];
+
+  // ✅ NEW — fetch user + linkCode on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const token = session.tokens?.idToken?.toString();
+
+        if (!token) {
+          throw new Error("No access token found");
+        }
+
+        const response = await fetch(
+          "https://aagvjd6mke.execute-api.us-east-1.amazonaws.com/bootstrap-user",
+          {
+            method: "POST", // ✅ FIXED
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({}), // ✅ REQUIRED for POST
+          }
+        );
+
+        if (!response.ok) {
+          const text = await response.text();
+          console.error("API error:", text);
+          throw new Error("Failed to fetch user");
+        }
+
+        const user = await response.json();
+        setLinkCode(user.linkCode ?? null);
+      } catch (error) {
+        console.error("Failed to fetch link code", error);
+      } finally {
+        setLoadingLinkCode(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ global: true });
+
+      // Reset navigation & go to login
+      router.replace("/LoginScreen");
+    } catch (error) {
+      console.error("Failed to sign out", error);
+    }
+  };
 
   const SECTIONS: SettingsSection[] = [
     {
@@ -72,12 +130,8 @@ export default function SettingsScreen() {
       data: [{ type: "toggleNotifications" }],
     },
     {
-      title: "About",
-      data: [
-        { type: "appVersion" },
-        { type: "privacyPolicy" },
-        { type: "termsOfService" },
-      ],
+      title: "Session",
+      data: [{ type: "signOut" }],
     },
   ];
 
@@ -92,7 +146,6 @@ export default function SettingsScreen() {
     item: SettingItem;
     section: SettingsSection;
   }) => {
-    // Receiver rows — identified by section title + presence of name property
     if (
       section.title === "Registered Receivers" &&
       "name" in item &&
@@ -101,7 +154,6 @@ export default function SettingsScreen() {
       return <ReceiverRow receiver={item} />;
     }
 
-    // Typed switch for settings rows
     if ("type" in item) {
       switch (item.type) {
         case "fullName":
@@ -137,7 +189,7 @@ export default function SettingsScreen() {
           );
 
         case "linkCodeCard":
-          return <LinkCodeCard />;
+          return <LinkCodeCard linkCode={linkCode} loading={loadingLinkCode} />;
 
         case "toggleNotifications":
           return (
@@ -154,14 +206,14 @@ export default function SettingsScreen() {
             />
           );
 
-        case "appVersion":
-          return <SettingRow label="App Version" right={<Text>1.0.0</Text>} />;
-
-        case "privacyPolicy":
-          return <SettingRow label="Privacy Policy" />;
-
-        case "termsOfService":
-          return <SettingRow label="Terms of Service" />;
+        case "signOut":
+          return (
+            <SettingRow
+              label="Sign Out"
+              onPress={handleSignOut}
+              right={<AntDesign name="logout" size={20} color="#FD1101" />}
+            />
+          );
       }
     }
 
@@ -183,14 +235,15 @@ export default function SettingsScreen() {
         )}
         stickySectionHeadersEnabled={false}
         SectionSeparatorComponent={() => <View style={{ height: 8 }} />}
+        // ✅ ADD THESE
+        contentContainerStyle={{ paddingBottom: 120 }}
       />
     </View>
   );
 }
 
-//
 // -----------------------------------------
-// REUSABLE COMPONENTS (with types)
+// REUSABLE COMPONENTS
 // -----------------------------------------
 
 type SettingRowProps = {
@@ -206,33 +259,41 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, right, onPress }) => (
   </Pressable>
 );
 
-const LinkCodeCard: React.FC = () => {
-  const linkCode = "93KD-TY72";
+// ✅ UPDATED — accepts linkCode as prop
+type LinkCodeCardProps = {
+  linkCode: string | null;
+  loading: boolean;
+};
+
+const LinkCodeCard: React.FC<LinkCodeCardProps> = ({ linkCode, loading }) => {
+  if (loading) {
+    return (
+      <View style={styles.senderCard}>
+        <Text style={{ color: "gray" }}>Loading link code...</Text>
+      </View>
+    );
+  }
+
+  if (!linkCode) {
+    return (
+      <View style={styles.senderCard}>
+        <Text style={{ color: "gray" }}>No link code available</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.senderCard}>
-      {/* Link Code Display */}
       <Text style={styles.senderCardCode}>{linkCode}</Text>
 
-      {/* Buttons stacked vertically */}
       <View style={styles.senderCardButtons}>
         <Pressable style={styles.senderBtn}>
-          <AntDesign
-            name="qrcode"
-            size={20}
-            color="#FD1101"
-            style={styles.senderIcon}
-          />
+          <AntDesign name="qrcode" size={20} color="#FD1101" />
           <Text style={styles.senderBtnText}>Generate QR Code</Text>
         </Pressable>
 
         <Pressable style={styles.senderBtn}>
-          <Feather
-            name="copy"
-            size={20}
-            color="#FD1101"
-            style={styles.senderIcon}
-          />
+          <Feather name="copy" size={20} color="#FD1101" />
           <Text style={styles.senderBtnText}>Copy Code</Text>
         </Pressable>
       </View>
@@ -264,9 +325,8 @@ const ReceiverRow: React.FC<ReceiverRowProps> = ({ receiver }) => (
   </View>
 );
 
-//
 // -----------------------------------------
-// STYLES
+// STYLES (UNCHANGED)
 // -----------------------------------------
 
 const styles = StyleSheet.create({
@@ -281,22 +341,18 @@ const styles = StyleSheet.create({
     borderColor: "#E5E5E5",
     alignItems: "center",
   },
-
   senderCardCode: {
     fontSize: 28,
     fontWeight: "bold",
     letterSpacing: 2,
     marginBottom: 22,
     color: "#111",
-    textAlign: "center",
   },
-
   senderCardButtons: {
     width: "100%",
     gap: 12,
     alignItems: "center",
   },
-
   senderBtn: {
     width: "90%",
     paddingVertical: 12,
@@ -309,23 +365,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-
-  senderIcon: {
-    marginRight: 4,
-  },
-
   senderBtnText: {
     fontSize: 15,
     color: "#FD1101",
     fontWeight: "600",
   },
-
   container: {
     flex: 1,
     backgroundColor: "#FD1101",
     paddingTop: 12,
   },
-
   sectionHeader: {
     fontSize: 14,
     fontWeight: "600",
@@ -334,7 +383,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 6,
   },
-
   row: {
     paddingVertical: 16,
     paddingHorizontal: 16,
@@ -345,44 +393,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   rowLabel: {
     fontSize: 16,
     color: "#111",
   },
-
-  card: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-  },
-
-  cardCode: {
-    fontSize: 22,
-    fontWeight: "bold",
-  },
-
-  cardButtons: {
-    flexDirection: "row",
-    marginTop: 14,
-    gap: 10,
-  },
-
-  cardBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: "#EFEFEF",
-    borderRadius: 8,
-  },
-
-  cardBtnText: {
-    fontSize: 14,
-  },
-
   receiverRow: {
     backgroundColor: "white",
     paddingVertical: 16,
@@ -393,7 +407,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   receiverName: {
     fontSize: 16,
     fontWeight: "500",

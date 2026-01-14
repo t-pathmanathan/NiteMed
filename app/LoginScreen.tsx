@@ -2,7 +2,7 @@ import LabeledGeneralInput from "@/components/LabeledGeneralInput";
 import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import MainButton from "@/components/MainButton";
 import { signInApi } from "@/src/api/authApi";
-import { fetchUserAttributes } from "@aws-amplify/auth";
+import { bootstrapUserApi } from "@/src/api/userApi";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
@@ -32,15 +32,14 @@ export default function LoginScreen() {
 
       await SecureStore.setItemAsync("hasSignedInBefore", "true");
 
-      const attributes = await fetchUserAttributes();
-      const role = attributes["custom:role"];
+      const userProfile = await bootstrapUserApi();
 
-      if (role === "takesMeds") {
+      if (userProfile.role === "takesMeds") {
         router.push("/sender/(tabs)/SenderHomeScreen");
-      } else if (role === "tracksMeds") {
+      } else if (userProfile.role === "tracksMeds") {
         router.push("/receiver/(tabs)/ReceiverHomeScreen");
       } else {
-        throw new Error("Missing user role");
+        throw new Error("Invalid user role");
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Sign-in failed";
