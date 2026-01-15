@@ -1,6 +1,7 @@
+import { bootstrapUserApi } from "@/src/api/userApi";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
-import { fetchAuthSession, signOut } from "aws-amplify/auth";
+import { signOut } from "aws-amplify/auth";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react"; // ✅ NEW
 import {
@@ -11,7 +12,6 @@ import {
   Text,
   View,
 } from "react-native";
-
 // -----------------------------------------
 // TYPES
 // -----------------------------------------
@@ -53,36 +53,10 @@ export default function SettingsScreen() {
     { id: 2, name: "Receiver 2", status: "inactive" },
   ];
 
-  // ✅ NEW — fetch user + linkCode on mount
   useEffect(() => {
-    const fetchUser = async () => {
+    const loadUser = async () => {
       try {
-        const session = await fetchAuthSession();
-        const token = session.tokens?.idToken?.toString();
-
-        if (!token) {
-          throw new Error("No access token found");
-        }
-
-        const response = await fetch(
-          "https://aagvjd6mke.execute-api.us-east-1.amazonaws.com/bootstrap-user",
-          {
-            method: "POST", // ✅ FIXED
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({}), // ✅ REQUIRED for POST
-          }
-        );
-
-        if (!response.ok) {
-          const text = await response.text();
-          console.error("API error:", text);
-          throw new Error("Failed to fetch user");
-        }
-
-        const user = await response.json();
+        const user = await bootstrapUserApi();
         setLinkCode(user.linkCode ?? null);
       } catch (error) {
         console.error("Failed to fetch link code", error);
@@ -91,7 +65,7 @@ export default function SettingsScreen() {
       }
     };
 
-    fetchUser();
+    loadUser();
   }, []);
 
   const router = useRouter();
