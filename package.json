@@ -9,8 +9,10 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test:registration": "maestro test e2e/flow_registration.yaml",
-    "test:login": "maestro test e2e/flow_login.yaml"
+    "test:sender_registration": "maestro test e2e/flow_sender_registration.yaml",
+    "test:sender_login": "maestro test e2e/flow_sender_login.yaml",
+    "test:receiver_registration": "maestro test e2e/flow_receiver_registration.yaml",
+    "test:receiver_login": "maestro test e2e/flow_receiver_login.yaml"
   },
   "dependencies": {
     "@aws-amplify/react-native": "^1.3.1",

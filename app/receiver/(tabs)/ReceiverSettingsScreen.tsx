@@ -1,6 +1,11 @@
+import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
+import { signOut } from "aws-amplify/auth";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
   SectionList,
   StyleSheet,
@@ -9,6 +14,8 @@ import {
   TextInput,
   View,
 } from "react-native";
+
+import { linkReceiverApi } from "@/src/api/linkApi"; // ✅ NEW
 
 // -----------------------------------------
 // TYPES
@@ -27,10 +34,8 @@ type SettingItem =
   | { type: "deleteAccount" }
   | { type: "receiverLinkCode" }
   | { type: "toggleNotifications" }
-  | { type: "appVersion" }
-  | { type: "privacyPolicy" }
-  | { type: "termsOfService" }
-  | Sender; // For Linked Parents section
+  | { type: "signOut" }
+  | Sender;
 
 type SettingsSection = {
   title: string;
@@ -44,11 +49,51 @@ type SettingsSection = {
 export default function ReceiverSettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [enteredCode, setEnteredCode] = useState("");
+  const [linking, setLinking] = useState(false); // ✅ NEW
 
+  // 🔧 TEMP MOCK — will be replaced by backend fetch later
   const senders: Sender[] = [
     { id: 1, name: "Sender 1", status: "active" },
     { id: 2, name: "Sender 2", status: "inactive" },
   ];
+
+  // -----------------------------------------
+  // LINK HANDLER
+  // -----------------------------------------
+
+  const handleLinkSender = async () => {
+    if (!enteredCode.trim()) {
+      Alert.alert("Error", "Please enter a link code");
+      return;
+    }
+
+    try {
+      setLinking(true);
+      await linkReceiverApi(enteredCode.trim().toUpperCase());
+      Alert.alert("Success", "Sender linked successfully");
+      setEnteredCode("");
+    } catch (error) {
+      Alert.alert(
+        "Link Failed",
+        error instanceof Error ? error.message : "Something went wrong"
+      );
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ global: true });
+
+      // Reset navigation & go to login
+      router.replace("/LoginScreen");
+    } catch (error) {
+      console.error("Failed to sign out", error);
+    }
+  };
 
   const SECTIONS: SettingsSection[] = [
     {
@@ -73,12 +118,8 @@ export default function ReceiverSettingsScreen() {
       data: [{ type: "toggleNotifications" }],
     },
     {
-      title: "About",
-      data: [
-        { type: "appVersion" },
-        { type: "privacyPolicy" },
-        { type: "termsOfService" },
-      ],
+      title: "Session",
+      data: [{ type: "signOut" }],
     },
   ];
 
@@ -93,7 +134,6 @@ export default function ReceiverSettingsScreen() {
     item: SettingItem;
     section: SettingsSection;
   }) => {
-    // Sender rows (list of linked senders)
     if (
       section.title === "Registered Senders" &&
       "name" in item &&
@@ -108,7 +148,7 @@ export default function ReceiverSettingsScreen() {
           return (
             <SettingRow
               label="Full Name"
-              right={<Feather name="edit" size={20} color="black" />}
+              right={<Feather name="edit" size={20} />}
             />
           );
 
@@ -116,7 +156,7 @@ export default function ReceiverSettingsScreen() {
           return (
             <SettingRow
               label="Email"
-              right={<Feather name="edit" size={20} color="black" />}
+              right={<Feather name="edit" size={20} />}
             />
           );
 
@@ -124,7 +164,7 @@ export default function ReceiverSettingsScreen() {
           return (
             <SettingRow
               label="Change Password"
-              right={<Feather name="edit" size={20} color="black" />}
+              right={<Feather name="edit" size={20} />}
             />
           );
 
@@ -141,6 +181,8 @@ export default function ReceiverSettingsScreen() {
             <ReceiverLinkCodeCard
               enteredCode={enteredCode}
               onChangeCode={setEnteredCode}
+              onSubmit={handleLinkSender} // ✅ NEW
+              loading={linking} // ✅ NEW
             />
           );
 
@@ -159,23 +201,19 @@ export default function ReceiverSettingsScreen() {
             />
           );
 
-        case "appVersion":
-          return <SettingRow label="App Version" right={<Text>1.0.0</Text>} />;
-
-        case "privacyPolicy":
-          return <SettingRow label="Privacy Policy" />;
-
-        case "termsOfService":
-          return <SettingRow label="Terms of Service" />;
+        case "signOut":
+          return (
+            <SettingRow
+              label="Sign Out"
+              onPress={handleSignOut}
+              right={<AntDesign name="logout" size={20} color="#FD1101" />}
+            />
+          );
       }
     }
 
     return null;
   };
-
-  // -----------------------------------------
-  // RENDER SCREEN
-  // -----------------------------------------
 
   return (
     <View style={styles.container}>
@@ -188,12 +226,13 @@ export default function ReceiverSettingsScreen() {
         )}
         stickySectionHeadersEnabled={false}
         SectionSeparatorComponent={() => <View style={{ height: 8 }} />}
+        // ✅ ADD THESE
+        contentContainerStyle={{ paddingBottom: 120 }}
       />
     </View>
   );
 }
 
-//
 // -----------------------------------------
 // REUSABLE COMPONENTS
 // -----------------------------------------
@@ -211,18 +250,23 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, right, onPress }) => (
   </Pressable>
 );
 
-// // Receiver Link Code — flipped version of sender side
+// -----------------------------------------
+// RECEIVER LINK CARD
+// -----------------------------------------
 
 const ReceiverLinkCodeCard = ({
   enteredCode,
   onChangeCode,
+  onSubmit,
+  loading,
 }: {
   enteredCode: string;
   onChangeCode: (t: string) => void;
+  onSubmit: () => void;
+  loading: boolean;
 }) => {
   return (
     <View style={styles.receiverCard}>
-      {/* Centered input */}
       <TextInput
         placeholder="Enter Link Code"
         value={enteredCode}
@@ -231,36 +275,40 @@ const ReceiverLinkCodeCard = ({
         autoCapitalize="characters"
       />
 
-      {/* Stacked buttons */}
       <View style={styles.receiverButtons}>
-        {/* Scan QR button (icon + outline) */}
         <Pressable style={styles.receiverScanBtn}>
           <Feather name="camera" size={20} color="#FD1101" />
           <Text style={styles.receiverScanText}>Scan QR Code</Text>
         </Pressable>
 
-        {/* Submit / Link Account Button */}
-        <Pressable style={styles.receiverPrimaryBtn}>
-          <Text style={styles.receiverPrimaryText}>Submit / Link Sender</Text>
+        <Pressable
+          style={[styles.receiverPrimaryBtn, loading && { opacity: 0.7 }]}
+          onPress={onSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.receiverPrimaryText}>Submit / Link Sender</Text>
+          )}
         </Pressable>
       </View>
     </View>
   );
 };
 
-type SenderRowProps = {
-  sender: Sender;
-};
+// -----------------------------------------
+// SENDER ROW
+// -----------------------------------------
 
-// Sender list row
-const SenderRow: React.FC<SenderRowProps> = ({ sender }) => (
+const SenderRow = ({ sender }: { sender: Sender }) => (
   <View style={styles.receiverRow}>
     <View>
       <Text style={styles.receiverName}>{sender.name}</Text>
       <Text
         style={{
-          color: sender.status === "active" ? "green" : "gray",
           fontSize: 12,
+          color: sender.status === "active" ? "green" : "gray",
         }}
       >
         {sender.status}
@@ -273,85 +321,16 @@ const SenderRow: React.FC<SenderRowProps> = ({ sender }) => (
   </View>
 );
 
-//
 // -----------------------------------------
 // STYLES
 // -----------------------------------------
 
 const styles = StyleSheet.create({
-  receiverCard: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    alignItems: "center",
-  },
-
-  receiverInput: {
-    width: "90%",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    fontSize: 18,
-    backgroundColor: "#FAFAFA",
-    textAlign: "center",
-    letterSpacing: 1.5,
-    marginBottom: 20,
-  },
-
-  receiverButtons: {
-    width: "100%",
-    gap: 12,
-    alignItems: "center",
-  },
-
-  receiverPrimaryBtn: {
-    width: "90%",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: "#FD1101",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  receiverPrimaryText: {
-    fontSize: 15,
-    color: "white",
-    fontWeight: "600",
-  },
-
-  receiverScanBtn: {
-    width: "90%",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#FD1101",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  receiverScanText: {
-    fontSize: 15,
-    color: "#FD1101",
-    fontWeight: "600",
-  },
-
   container: {
     flex: 1,
     backgroundColor: "#FD1101",
     paddingTop: 12,
   },
-
   sectionHeader: {
     fontSize: 14,
     fontWeight: "600",
@@ -360,83 +339,66 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 6,
   },
-
   row: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    padding: 16,
     backgroundColor: "white",
-    borderBottomColor: "#E5E5E5",
-    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
   },
-
   rowLabel: {
     fontSize: 16,
-    color: "#111",
   },
-
-  card: {
+  receiverCard: {
     backgroundColor: "white",
-    marginHorizontal: 16,
-    padding: 16,
+    margin: 16,
+    padding: 24,
     borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
+    alignItems: "center",
   },
-
-  textInput: {
+  receiverInput: {
+    width: "90%",
     borderWidth: 1,
-    borderColor: "#DDD",
     padding: 12,
     borderRadius: 8,
-    fontSize: 16,
-    backgroundColor: "#FAFAFA",
+    marginBottom: 20,
+    textAlign: "center",
   },
-
-  cardButtons: {
-    flexDirection: "row",
-    marginTop: 14,
-    gap: 10,
+  receiverButtons: {
+    width: "100%",
+    gap: 12,
     alignItems: "center",
   },
-
-  cardBtn: {
-    flex: 1,
-    paddingVertical: 12,
+  receiverPrimaryBtn: {
+    width: "90%",
+    padding: 12,
+    borderRadius: 10,
     backgroundColor: "#FD1101",
-    borderRadius: 8,
     alignItems: "center",
   },
-
-  cardBtnText: {
-    fontSize: 15,
+  receiverPrimaryText: {
     color: "white",
     fontWeight: "600",
   },
-
-  qrButton: {
-    padding: 10,
+  receiverScanBtn: {
+    width: "90%",
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#FD1101",
-    borderRadius: 8,
+    flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
+    gap: 10,
   },
-
+  receiverScanText: {
+    color: "#FD1101",
+    fontWeight: "600",
+  },
   receiverRow: {
     backgroundColor: "white",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomColor: "#E5E5E5",
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    padding: 16,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
   },
-
   receiverName: {
     fontSize: 16,
     fontWeight: "500",

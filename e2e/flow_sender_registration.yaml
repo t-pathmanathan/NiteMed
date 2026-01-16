@@ -8,10 +8,10 @@ appId: com.thilochan.NiteMed
 - inputText: "thilochan@gmail.com"
 - tapOn:
     id: "input_password"
-- inputText: "StrongPass123!"
+- inputText: "SenderPass123!"
 - tapOn:
     id: "input_confirmPassword"
-- inputText: "StrongPass123!"
+- inputText: "SenderPass123!"
 - tapOn:
     id: "role_takesMeds"
 - tapOn:
