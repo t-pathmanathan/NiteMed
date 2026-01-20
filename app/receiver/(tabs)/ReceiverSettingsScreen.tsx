@@ -1,6 +1,6 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
-import { signOut } from "aws-amplify/auth";
+import { fetchUserAttributes, signOut } from "aws-amplify/auth";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -22,6 +22,11 @@ import { unlinkSenderApi } from "@/src/api/unlinkApi";
 // -----------------------------------------
 // TYPES
 // -----------------------------------------
+
+type UserProfile = {
+  fullName: string;
+  email: string;
+};
 
 type Sender = {
   userId: string;
@@ -54,12 +59,34 @@ type SettingsSection = {
 export default function ReceiverSettingsScreen() {
   const router = useRouter();
 
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [enteredCode, setEnteredCode] = useState("");
   const [linking, setLinking] = useState(false);
 
   const [senders, setSenders] = useState<Sender[]>([]);
   const [loadingSenders, setLoadingSenders] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const attrs = await fetchUserAttributes();
+
+        setUserProfile({
+          fullName: attrs.name ?? "Unknown",
+          email: attrs.email ?? "Unknown",
+        });
+      } catch (err) {
+        Alert.alert("Error", "Failed to load account info");
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   // -----------------------------------------
   // LOAD CONNECTIONS
@@ -153,12 +180,9 @@ export default function ReceiverSettingsScreen() {
   const SECTIONS: SettingsSection[] = [
     {
       title: "Account",
-      data: [
-        { type: "fullName" },
-        { type: "email" },
-        { type: "changePassword" },
-        { type: "deleteAccount" },
-      ],
+      data: loadingProfile
+        ? [{ type: "loading" }]
+        : [{ type: "fullName" }, { type: "email" }],
     },
     {
       title: "Link Code",
@@ -172,14 +196,13 @@ export default function ReceiverSettingsScreen() {
           ? [{ type: "empty" }]
           : senders,
     },
-
     {
       title: "Notifications",
       data: [{ type: "toggleNotifications" }],
     },
     {
       title: "Session",
-      data: [{ type: "signOut" }],
+      data: [{ type: "signOut" }, { type: "deleteAccount" }],
     },
   ];
 
@@ -221,24 +244,14 @@ export default function ReceiverSettingsScreen() {
         case "fullName":
           return (
             <SettingRow
-              label="Full Name"
-              right={<Feather name="edit" size={20} />}
+              label={`${userProfile ? `${userProfile.fullName}` : ""}`}
             />
           );
 
         case "email":
           return (
             <SettingRow
-              label="Email"
-              right={<Feather name="edit" size={20} />}
-            />
-          );
-
-        case "changePassword":
-          return (
-            <SettingRow
-              label="Change Password"
-              right={<Feather name="edit" size={20} />}
+              label={`${userProfile ? `${userProfile.email}` : ""}`}
             />
           );
 
@@ -246,7 +259,7 @@ export default function ReceiverSettingsScreen() {
           return (
             <SettingRow
               label="Delete Account"
-              right={<Text style={{ color: "red" }}>Delete</Text>}
+              right={<AntDesign name="delete" size={20} color="#FD1101" />}
             />
           );
 
