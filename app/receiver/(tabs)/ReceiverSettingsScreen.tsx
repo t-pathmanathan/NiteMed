@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import { getMyConnections } from "@/src/api/connectionsApi"; // ✅ NEW
+import { deleteAccountApi } from "@/src/api/deleteAccountApi";
 import { linkReceiverApi } from "@/src/api/linkApi";
 import { unlinkSenderApi } from "@/src/api/unlinkApi";
 
@@ -154,6 +155,20 @@ export default function ReceiverSettingsScreen() {
     }
   };
 
+  //   const formatLinkCode = (input: string) => {
+  //   // Remove everything except digits
+  //   const digits = input.replace(/\D/g, "").slice(0, 6);
+
+  //   const part1 = digits.slice(0, 2);
+  //   const part2 = digits.slice(2, 6);
+
+  //   if (digits.length <= 2) {
+  //     return `NM${part1}`;
+  //   }
+
+  //   return `NM${part1}-${part2}`;
+  // };
+
   const handleUnlinkSender = async (senderId: string) => {
     try {
       await unlinkSenderApi(senderId);
@@ -170,6 +185,31 @@ export default function ReceiverSettingsScreen() {
       router.replace("/LoginScreen");
     } catch (error) {
       console.error("Failed to sign out", error);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently delete your account and all linked data. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: confirmDeleteAccount,
+        },
+      ],
+    );
+  };
+
+  const confirmDeleteAccount = async () => {
+    try {
+      await deleteAccountApi();
+      await signOut({ global: true });
+      router.replace("/LoginScreen");
+    } catch (err) {
+      Alert.alert("Error", "Failed to delete account");
     }
   };
 
@@ -259,6 +299,7 @@ export default function ReceiverSettingsScreen() {
           return (
             <SettingRow
               label="Delete Account"
+              onPress={handleDeleteAccount}
               right={<AntDesign name="delete" size={20} color="#FD1101" />}
             />
           );
@@ -355,9 +396,11 @@ const ReceiverLinkCodeCard = ({
     <TextInput
       placeholder="Enter Link Code"
       value={enteredCode}
+      placeholderTextColor={"#AAA"}
       onChangeText={onChangeCode}
       style={styles.receiverInput}
       autoCapitalize="characters"
+      maxLength={9}
     />
 
     <View style={styles.receiverButtons}>
@@ -444,11 +487,17 @@ const styles = StyleSheet.create({
   receiverInput: {
     width: "90%",
     borderWidth: 1,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
+    borderColor: "#E5E5E5",
+    paddingVertical: 18,
+    borderRadius: 10,
+    marginBottom: 24,
     textAlign: "center",
+    fontSize: 28,
+    fontWeight: "bold",
+    letterSpacing: 2,
+    color: "#111",
   },
+
   receiverButtons: {
     width: "100%",
     gap: 12,
