@@ -2,7 +2,7 @@ appId: com.thilochan.NiteMed
 ---
 - tapOn:
     id: "input_fullName"
-- inputText: "Thilochan Pathmanathan"
+- inputText: "Sender"
 - tapOn:
     id: "input_email"
 - inputText: "thilochan@gmail.com"

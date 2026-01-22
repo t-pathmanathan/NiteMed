@@ -15,10 +15,10 @@ import {
   View,
 } from "react-native";
 
-import { getMyConnections } from "@/src/api/connectionsApi"; // ✅ NEW
 import { deleteAccountApi } from "@/src/api/deleteAccountApi";
 import { linkReceiverApi } from "@/src/api/linkApi";
-import { unlinkSenderApi } from "@/src/api/unlinkApi";
+import { getMySenders } from "@/src/api/retrieveSendersApi";
+import { unlinkSenderApi } from "@/src/api/unlinkSenderApi";
 
 // -----------------------------------------
 // TYPES
@@ -96,7 +96,7 @@ export default function ReceiverSettingsScreen() {
   useEffect(() => {
     const loadConnections = async () => {
       try {
-        const res = await getMyConnections();
+        const res = await getMySenders();
 
         setSenders(
           res.connections.map((c: any) => ({
@@ -134,7 +134,7 @@ export default function ReceiverSettingsScreen() {
 
       // 🔁 Refresh list
       setLoadingSenders(true);
-      const res = await getMyConnections();
+      const res = await getMySenders();
 
       setSenders(
         res.connections.map((c: any) => ({
@@ -554,12 +554,6 @@ const styles = StyleSheet.create({
   emptyText: {
     color: "#999",
     fontSize: 14,
-  },
-
-  senderInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
   },
 
   statusBadge: {
