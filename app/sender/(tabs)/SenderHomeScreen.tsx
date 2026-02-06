@@ -1,5 +1,6 @@
 import MedicationConfirmCard from "@/components/MedicationConfirmCard";
 import { confirmMedicationApi } from "@/src/api/confirmMedicationApi";
+import { senderNotification } from "@/src/api/sendNotificationApi";
 import React from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 
@@ -7,6 +8,7 @@ export default function SenderHomeScreen() {
   const handleConfirm = async () => {
     try {
       await confirmMedicationApi();
+      await senderNotification();
       console.log("Medication confirmed");
     } catch (err) {
       console.error(err);

@@ -8,6 +8,8 @@ import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { COLORS, FONTS } from "../theme";
 
+import { saveExpoPushToken } from "@/src/api/registerNotificationApi";
+import { registerPushNotifications } from "@/src/utils/registerPushNotifications";
 import * as SecureStore from "expo-secure-store";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,6 +35,12 @@ export default function LoginScreen() {
       await SecureStore.setItemAsync("hasSignedInBefore", "true");
 
       const userProfile = await bootstrapUserApi();
+
+      const token = await registerPushNotifications();
+
+      if (token) {
+        await saveExpoPushToken(token);
+      }
 
       if (userProfile.role === "takesMeds") {
         router.push("/sender/(tabs)/SenderHomeScreen");
