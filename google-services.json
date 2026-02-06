@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "97870620099",
+    "project_id": "nm-pushnotifications",
+    "storage_bucket": "nm-pushnotifications.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:97870620099:android:760797a84f8feaa5868976",
+        "android_client_info": {
+          "package_name": "com.thilochan.NiteMed"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBd77LOljTTnSPKs1IiU8wcAxlDkmJyq8M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
