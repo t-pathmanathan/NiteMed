@@ -25,7 +25,7 @@ export default function StartScreen() {
     if (hasAccount) {
       router.push("/LoginScreen");
     } else {
-      router.push("/LoginScreen");
+      router.push("/RegistrationScreen");
     }
   };
 
