@@ -21,7 +21,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.thilochan.NiteMed",
-      "googleServicesFile": ".android/google-services.json"
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
