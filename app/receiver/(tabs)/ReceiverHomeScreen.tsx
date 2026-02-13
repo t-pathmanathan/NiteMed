@@ -1,8 +1,10 @@
 import { getReceiverHome } from "@/src/api/readMedicationApi";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,31 +24,43 @@ type Sender = {
 export default function ReceiverHomeScreen() {
   const [senders, setSenders] = useState<Sender[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ Reusable load function
+  const loadReceiverHome = async () => {
+    try {
+      const res = await getReceiverHome();
+
+      const mappedSenders: Sender[] = res.senders.map((s: any) => ({
+        id: s.senderId,
+        name: s.fullName,
+        status: s.status === "TAKEN" ? "taken" : "not-taken",
+        lastTaken: s.timestamp ? Date.parse(s.timestamp) : undefined,
+      }));
+
+      setSenders(mappedSenders);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load sender data");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // ✅ Initial load
   useEffect(() => {
-    const loadReceiverHome = async () => {
-      try {
-        const res = await getReceiverHome();
-
-        const mappedSenders: Sender[] = res.senders.map((s: any) => ({
-          id: s.senderId,
-          name: s.fullName,
-          status: s.status === "TAKEN" ? "taken" : "not-taken",
-          lastTaken: s.timestamp ? Date.parse(s.timestamp) : undefined,
-        }));
-
-        setSenders(mappedSenders);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load sender data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadReceiverHome();
   }, []);
+
+  // ✅ Auto refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadReceiverHome();
+    }, []),
+  );
 
   const handleNudge = async (sender: Sender) => {
     try {
@@ -98,6 +112,16 @@ export default function ReceiverHomeScreen() {
       <Text style={styles.header}>Your Senders</Text>
 
       <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadReceiverHome();
+            }}
+            tintColor="white"
+          />
+        }
         contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 16 }}
       >
         {senders.map((sender) => (
@@ -185,15 +209,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
-  iconCircle: {
-    width: 50,
-    height: 50,
-    backgroundColor: "#FD1101",
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
-  },
   statusBadge: {
     alignItems: "center",
     paddingHorizontal: 20,
@@ -206,10 +221,6 @@ const styles = StyleSheet.create({
   },
   badgeNotTaken: {
     backgroundColor: "#FFD6D6",
-  },
-  timestampText: {
-    fontSize: 12,
-    color: "#555",
   },
   nudgeButton: {
     backgroundColor: "#FD1101",
@@ -243,7 +254,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 14,
   },
-
   avatarCircle: {
     width: 44,
     height: 44,
@@ -253,20 +263,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-
   avatarText: {
     color: "white",
     fontSize: 18,
     fontWeight: "800",
   },
-
   senderName: {
     flex: 1,
     fontSize: 18,
     fontWeight: "700",
     marginRight: 10,
   },
-
   infoContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -274,32 +281,22 @@ const styles = StyleSheet.create({
     borderTopColor: "#EEE",
     paddingTop: 12,
   },
-
   infoColumn: {
     flex: 1,
     alignItems: "center",
   },
-
   infoTitle: {
     fontSize: 14,
     color: "#333",
     fontWeight: "700",
     marginBottom: 6,
   },
-
-  timeText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-
   timeBadge: {
     backgroundColor: "#F0F0F0",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
-
   timeBadgeText: {
     fontSize: 14,
     fontWeight: "600",
