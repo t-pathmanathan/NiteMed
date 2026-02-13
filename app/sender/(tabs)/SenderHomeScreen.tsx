@@ -1,6 +1,6 @@
 import MedicationConfirmCard from "@/components/MedicationConfirmCard";
 import { confirmMedicationApi } from "@/src/api/confirmMedicationApi";
-import { senderNotification } from "@/src/api/sendNotificationApi";
+import { senderNotification } from "@/src/api/senderNotificationApi";
 import React from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 

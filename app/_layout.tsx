@@ -27,13 +27,27 @@ export default function RootLayout() {
   // 👇 Create Android notification channel ON APP START
   useEffect(() => {
     if (Platform.OS === "android") {
+      // 🔹 Default channel (Confirm notifications)
       Notifications.setNotificationChannelAsync("default", {
-        name: "Default",
-        importance: Notifications.AndroidImportance.MAX,
+        name: "Default Notifications",
+        importance: Notifications.AndroidImportance.DEFAULT,
         sound: "default",
         vibrationPattern: [0, 250, 250, 250],
         enableVibrate: true,
         enableLights: true,
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+
+      // 🚨 Alarm channel (Nudge notifications)
+      Notifications.setNotificationChannelAsync("alarm-channel", {
+        name: "Medication Alarm",
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+        vibrationPattern: [0, 500, 500, 500, 500],
+        enableVibrate: true,
+        enableLights: true,
+        bypassDnd: true,
         lockscreenVisibility:
           Notifications.AndroidNotificationVisibility.PUBLIC,
       });

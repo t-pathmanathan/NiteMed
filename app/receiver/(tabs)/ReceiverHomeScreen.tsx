@@ -2,12 +2,15 @@ import { getReceiverHome } from "@/src/api/readMedicationApi";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+
+import { sendNudge } from "@/src/api/receiverNotification";
 
 type Sender = {
   id: string;
@@ -45,9 +48,13 @@ export default function ReceiverHomeScreen() {
     loadReceiverHome();
   }, []);
 
-  const handleNudge = (sender: Sender) => {
-    console.log(`Nudged ${sender.name}`);
-    // Later: backend → SNS / push
+  const handleNudge = async (sender: Sender) => {
+    try {
+      await sendNudge(sender.id);
+      Alert.alert("Nudge sent 🚨");
+    } catch (err) {
+      Alert.alert("Failed to send nudge");
+    }
   };
 
   const formatTime = (timestamp?: number) => {
