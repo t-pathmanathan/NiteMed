@@ -18,7 +18,9 @@ import {
 
 import { deleteAccountApi } from "@/src/api/deleteAccountApi";
 import { linkReceiverApi } from "@/src/api/linkApi";
+import { getNotificationPreference } from "@/src/api/notificationPreferenceApi";
 import { getMySenders } from "@/src/api/retrieveSendersApi";
+import { toggleNotification } from "@/src/api/toggleNotificationApi";
 import { unlinkSenderApi } from "@/src/api/unlinkSenderApi";
 
 // -----------------------------------------
@@ -63,7 +65,9 @@ export default function ReceiverSettingsScreen() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<
+    boolean | null
+  >(null);
   const [enteredCode, setEnteredCode] = useState("");
   const [linking, setLinking] = useState(false);
 
@@ -122,10 +126,28 @@ export default function ReceiverSettingsScreen() {
     loadConnections();
   }, []);
 
-  // Auto refresh when screen gains focus
+  // -----------------------------------------
+  // LOAD NOTIFICATION PREFERENCE
+  // -----------------------------------------
+
+  const loadNotificationPreference = async () => {
+    try {
+      const res = await getNotificationPreference();
+      setNotificationsEnabled(res.notificationsEnabled ?? true);
+    } catch {
+      Alert.alert("Error", "Failed to load notification preference");
+      setNotificationsEnabled(true); // safe fallback
+    }
+  };
+
+  useEffect(() => {
+    loadNotificationPreference();
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       loadConnections();
+      loadNotificationPreference();
     }, []),
   );
 
@@ -163,6 +185,20 @@ export default function ReceiverSettingsScreen() {
       await loadConnections(); // refresh instead of manual filtering
     } catch {
       Alert.alert("Error", "Failed to unlink sender");
+    }
+  };
+
+  const handleToggleNotifications = async (value: boolean) => {
+    // Optimistically update UI first
+    setNotificationsEnabled(value);
+
+    try {
+      await toggleNotification(value);
+    } catch (error) {
+      Alert.alert("Error", "Failed to update notification preference");
+
+      // Revert UI if API fails
+      setNotificationsEnabled(!value);
     }
   };
 
@@ -289,8 +325,9 @@ export default function ReceiverSettingsScreen() {
               label="Allow Notifications"
               right={
                 <Switch
-                  value={notificationsEnabled}
-                  onValueChange={setNotificationsEnabled}
+                  value={notificationsEnabled ?? false}
+                  onValueChange={handleToggleNotifications}
+                  disabled={notificationsEnabled === null}
                   thumbColor={notificationsEnabled ? "#FD1101" : "#f4f3f4"}
                   trackColor={{ false: "#767577", true: "#ffd6d3" }}
                 />
