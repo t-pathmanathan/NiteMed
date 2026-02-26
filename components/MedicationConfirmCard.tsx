@@ -10,6 +10,7 @@ import {
 
 type Props = {
   onConfirm: () => Promise<void> | void;
+  onCancel: () => Promise<void> | void;
 };
 
 const PROMPT_MESSAGE =
@@ -18,9 +19,17 @@ const PROMPT_MESSAGE =
 const THANK_YOU_MESSAGE =
   "Thank you for confirming.\n\nYour caregiver has been notified.\n\nSee you at the next check-in.";
 
-type Phase = "typingPrompt" | "awaitConfirm" | "typingThanks" | "done";
+const CANCEL_MESSAGE =
+  "Confirmation canceled.\n\nYour caregivers will be notified.\n\nReturning to check-in.";
 
-export default function MedicationConfirmCard({ onConfirm }: Props) {
+type Phase =
+  | "typingPrompt"
+  | "awaitConfirm"
+  | "typingThanks"
+  | "confirmed"
+  | "typingCancel";
+
+export default function MedicationConfirmCard({ onConfirm, onCancel }: Props) {
   const [displayedText, setDisplayedText] = useState("");
   const [phase, setPhase] = useState<Phase>("typingPrompt");
   const confirmOpacity = useState(new Animated.Value(0))[0];
@@ -58,9 +67,31 @@ export default function MedicationConfirmCard({ onConfirm }: Props) {
 
   const handleConfirm = async () => {
     setPhase("typingThanks");
-    await onConfirm();
 
-    typeMessage(THANK_YOU_MESSAGE, () => setPhase("done"));
+    try {
+      await onConfirm();
+      typeMessage(THANK_YOU_MESSAGE, () => setPhase("confirmed"));
+    } catch (err) {
+      // If backend fails, revert back
+      typeMessage(PROMPT_MESSAGE, () => setPhase("awaitConfirm"));
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      await onCancel();
+    } catch (err) {
+      // if backend fails, don't reset UI
+      return;
+    }
+
+    setPhase("typingCancel");
+
+    typeMessage(CANCEL_MESSAGE, () => {
+      setTimeout(() => {
+        typeMessage(PROMPT_MESSAGE, () => setPhase("awaitConfirm"));
+      }, 2000);
+    });
   };
 
   return (
@@ -76,6 +107,11 @@ export default function MedicationConfirmCard({ onConfirm }: Props) {
             <Text style={styles.confirmText}>Confirm</Text>
           </TouchableOpacity>
         </Animated.View>
+      )}
+      {phase === "confirmed" && (
+        <TouchableOpacity style={[styles.confirmButton]} onPress={handleCancel}>
+          <Text style={styles.confirmText}>Cancel</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
