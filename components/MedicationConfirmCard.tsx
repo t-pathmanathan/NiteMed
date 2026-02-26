@@ -20,7 +20,7 @@ const THANK_YOU_MESSAGE =
   "Thank you for confirming.\n\nYour caregiver has been notified.\n\nSee you at the next check-in.";
 
 const CANCEL_MESSAGE =
-  "Confirmation canceled.\n\nYour caregivers will be notified.\n\nReturning to check-in.";
+  "Confirmation canceled.\n\nYour caregiver will be notified.\n\nReturning to check-in.";
 
 type Phase =
   | "typingPrompt"
@@ -78,14 +78,16 @@ export default function MedicationConfirmCard({ onConfirm, onCancel }: Props) {
   };
 
   const handleCancel = async () => {
+    // Immediately change UI state
+    setPhase("typingCancel");
+
     try {
       await onCancel();
     } catch (err) {
-      // if backend fails, don't reset UI
+      // If backend fails, revert back
+      setPhase("confirmed");
       return;
     }
-
-    setPhase("typingCancel");
 
     typeMessage(CANCEL_MESSAGE, () => {
       setTimeout(() => {

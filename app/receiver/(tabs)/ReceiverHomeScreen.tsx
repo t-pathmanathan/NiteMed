@@ -26,6 +26,9 @@ export default function ReceiverHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nudgeCooldowns, setNudgeCooldowns] = useState<Record<string, number>>(
+    {},
+  );
 
   // ✅ Reusable load function
   const loadReceiverHome = async () => {
@@ -63,11 +66,47 @@ export default function ReceiverHomeScreen() {
   );
 
   const handleNudge = async (sender: Sender) => {
+    if (nudgeCooldowns[sender.id] > 0) return;
+
     try {
+      const COOLDOWN_SECONDS = 30;
+
+      // Start countdown
+      setNudgeCooldowns((prev) => ({
+        ...prev,
+        [sender.id]: COOLDOWN_SECONDS,
+      }));
+
       await sendNudge(sender.id);
       Alert.alert("Nudge sent 🚨");
+
+      // Countdown interval
+      const interval = setInterval(() => {
+        setNudgeCooldowns((prev) => {
+          const remaining = (prev[sender.id] || 0) - 1;
+
+          if (remaining <= 0) {
+            clearInterval(interval);
+            return {
+              ...prev,
+              [sender.id]: 0,
+            };
+          }
+
+          return {
+            ...prev,
+            [sender.id]: remaining,
+          };
+        });
+      }, 1000);
     } catch (err) {
       Alert.alert("Failed to send nudge");
+
+      // Reset immediately if failed
+      setNudgeCooldowns((prev) => ({
+        ...prev,
+        [sender.id]: 0,
+      }));
     }
   };
 
@@ -139,10 +178,18 @@ export default function ReceiverHomeScreen() {
               </Text>
 
               <TouchableOpacity
-                style={styles.nudgeButton}
+                style={[
+                  styles.nudgeButton,
+                  nudgeCooldowns[sender.id] > 0 && { opacity: 0.5 },
+                ]}
+                disabled={nudgeCooldowns[sender.id] > 0}
                 onPress={() => handleNudge(sender)}
               >
-                <Text style={styles.nudgeText}>Nudge</Text>
+                <Text style={styles.nudgeText}>
+                  {nudgeCooldowns[sender.id] > 0
+                    ? `Wait ${nudgeCooldowns[sender.id]}s`
+                    : "Nudge"}
+                </Text>
               </TouchableOpacity>
             </View>
 
