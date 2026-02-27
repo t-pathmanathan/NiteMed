@@ -1,5 +1,6 @@
 import MedicationConfirmCard from "@/components/MedicationConfirmCard";
 import { cancelMedication } from "@/src/api/cancelMedicationApi";
+import { getConfirmationStatus } from "@/src/api/confirmationStatusApi";
 import { confirmMedicationApi } from "@/src/api/confirmMedicationApi";
 import { getMyReceivers } from "@/src/api/retrieveReceiversApi";
 import { senderNotification } from "@/src/api/senderNotificationApi";
@@ -19,39 +20,44 @@ export default function SenderHomeScreen() {
   const [receivers, setReceivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState<boolean | null>(null);
 
   // -----------------------------------------
   // LOAD RECEIVERS
   // -----------------------------------------
 
-  const loadReceivers = async () => {
+  const loadData = async () => {
     try {
-      const res = await getMyReceivers();
-      setReceivers(res.connections ?? []);
+      const [receiverRes, confirmationRes] = await Promise.all([
+        getMyReceivers(),
+        getConfirmationStatus(),
+      ]);
+
+      setReceivers(receiverRes.connections ?? []);
+      setIsConfirmed(confirmationRes.confirmed);
     } catch (err) {
-      console.error("Failed to load receivers", err);
+      console.error("Failed to load data", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  // Initial load
   useEffect(() => {
-    loadReceivers();
+    loadData();
   }, []);
 
   // Auto refresh on screen focus
   useFocusEffect(
     useCallback(() => {
-      loadReceivers();
+      loadData();
     }, []),
   );
 
   // Pull to refresh
   const onRefresh = () => {
     setRefreshing(true);
-    loadReceivers();
+    loadData();
   };
 
   // -----------------------------------------
@@ -62,9 +68,8 @@ export default function SenderHomeScreen() {
     try {
       await confirmMedicationApi();
       await senderNotification();
-      console.log("Medication confirmed");
+      setIsConfirmed(true);
     } catch (err) {
-      console.error(err);
       Alert.alert(
         "Error",
         "We couldn't confirm your check-in. Please try again.",
@@ -80,9 +85,8 @@ export default function SenderHomeScreen() {
   const handleCancel = async () => {
     try {
       await cancelMedication();
-      console.log("Medication canceled");
+      setIsConfirmed(false);
     } catch (err) {
-      console.error(err);
       Alert.alert(
         "Error",
         "We couldn't cancel your confirmation. Please try again.",
@@ -110,7 +114,7 @@ export default function SenderHomeScreen() {
       <Text style={styles.header}>Check In</Text>
 
       <View style={styles.cardContainer}>
-        {loading ? (
+        {loading || isConfirmed === null ? (
           <ActivityIndicator size="large" color="white" />
         ) : receivers.length === 0 ? (
           <Text style={styles.emptyText}>No registered receivers</Text>
@@ -118,6 +122,7 @@ export default function SenderHomeScreen() {
           <MedicationConfirmCard
             onConfirm={handleConfirm}
             onCancel={handleCancel}
+            initialConfirmed={isConfirmed ?? false}
           />
         )}
       </View>
@@ -136,7 +141,6 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "700",
     color: "white",
-    marginBottom: 20,
     textAlign: "center",
   },
   cardContainer: {

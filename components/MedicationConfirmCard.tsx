@@ -1,121 +1,153 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
 } from "react-native";
 
 type Props = {
   onConfirm: () => Promise<void> | void;
   onCancel: () => Promise<void> | void;
+  initialConfirmed: boolean;
 };
+
+type Phase = "prompt" | "confirmed";
 
 const PROMPT_MESSAGE =
   "Hi there!\n\nIt's time to check in.\n\nHave you taken your medication?\n\nPlease confirm.";
 
 const THANK_YOU_MESSAGE =
-  "Thank you for confirming.\n\nYour caregiver has been notified.\n\nSee you at the next check-in.";
+  "Thank you for confirming.\n\nYour caregiver has been notified.\n\nIf this was a mistake, you may cancel below.";
 
-const CANCEL_MESSAGE =
-  "Confirmation canceled.\n\nYour caregiver will be notified.\n\nReturning to check-in.";
+export default function MedicationConfirmCard({
+  onConfirm,
+  onCancel,
+  initialConfirmed,
+}: Props) {
+  const [phase, setPhase] = useState<Phase>(
+    initialConfirmed ? "confirmed" : "prompt",
+  );
 
-type Phase =
-  | "typingPrompt"
-  | "awaitConfirm"
-  | "typingThanks"
-  | "confirmed"
-  | "typingCancel";
+  const [loading, setLoading] = useState(false);
 
-export default function MedicationConfirmCard({ onConfirm, onCancel }: Props) {
-  const [displayedText, setDisplayedText] = useState("");
-  const [phase, setPhase] = useState<Phase>("typingPrompt");
-  const confirmOpacity = useState(new Animated.Value(0))[0];
+  // Stronger animation values
+  const translateY = useRef(new Animated.Value(40)).current;
+  const scale = useRef(new Animated.Value(0.96)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    if (phase === "awaitConfirm") {
-      Animated.timing(confirmOpacity, {
-        toValue: 1,
-        duration: 800,
-        easing: Easing.out(Easing.ease),
+  const animateIn = () => {
+    translateY.setValue(40);
+    scale.setValue(0.96);
+    opacity.setValue(0);
+
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 450, // slightly slower
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
-      }).start();
-    }
-  }, [phase]);
-
-  // typing effect
-  const typeMessage = (message: string, onDone: () => void) => {
-    let i = 0;
-    setDisplayedText("");
-
-    const interval = setInterval(() => {
-      setDisplayedText(message.slice(0, i + 1));
-      i++;
-
-      if (i === message.length) {
-        clearInterval(interval);
-        onDone();
-      }
-    }, 35);
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 450,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 450,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
+  // Animate when phase changes
   useEffect(() => {
-    typeMessage(PROMPT_MESSAGE, () => setPhase("awaitConfirm"));
-  }, []);
+    animateIn();
+  }, [phase]);
+
+  // Sync with backend state
+  useEffect(() => {
+    setPhase(initialConfirmed ? "confirmed" : "prompt");
+  }, [initialConfirmed]);
+
+  const getMessage = () => {
+    return phase === "confirmed" ? THANK_YOU_MESSAGE : PROMPT_MESSAGE;
+  };
 
   const handleConfirm = async () => {
-    setPhase("typingThanks");
+    if (phase !== "prompt") return;
+
+    setPhase("confirmed"); // optimistic
+    setLoading(true);
 
     try {
       await onConfirm();
-      typeMessage(THANK_YOU_MESSAGE, () => setPhase("confirmed"));
-    } catch (err) {
-      // If backend fails, revert back
-      typeMessage(PROMPT_MESSAGE, () => setPhase("awaitConfirm"));
+    } catch {
+      setPhase("prompt");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCancel = async () => {
-    // Immediately change UI state
-    setPhase("typingCancel");
+    if (phase !== "confirmed") return;
+
+    setPhase("prompt"); // immediate switch back
+    setLoading(true);
 
     try {
       await onCancel();
-    } catch (err) {
-      // If backend fails, revert back
+    } catch {
       setPhase("confirmed");
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    typeMessage(CANCEL_MESSAGE, () => {
-      setTimeout(() => {
-        typeMessage(PROMPT_MESSAGE, () => setPhase("awaitConfirm"));
-      }, 2000);
-    });
   };
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.messageText}>{displayedText}</Text>
+    <Animated.View
+      style={[
+        styles.card,
+        {
+          opacity,
+          transform: [{ translateY }, { scale }],
+        },
+      ]}
+    >
+      <Text style={styles.messageText}>{getMessage()}</Text>
 
-      {phase === "awaitConfirm" && (
-        <Animated.View style={{ opacity: confirmOpacity }}>
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={handleConfirm}
-          >
+      {phase === "prompt" && (
+        <TouchableOpacity
+          style={styles.confirmButton}
+          onPress={handleConfirm}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
             <Text style={styles.confirmText}>Confirm</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-      {phase === "confirmed" && (
-        <TouchableOpacity style={[styles.confirmButton]} onPress={handleCancel}>
-          <Text style={styles.confirmText}>Cancel</Text>
+          )}
         </TouchableOpacity>
       )}
-    </View>
+
+      {phase === "confirmed" && (
+        <TouchableOpacity
+          style={styles.confirmButton}
+          onPress={handleCancel}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.confirmText}>Cancel</Text>
+          )}
+        </TouchableOpacity>
+      )}
+    </Animated.View>
   );
 }
 
@@ -127,9 +159,7 @@ const styles = StyleSheet.create({
     minHeight: 300,
     width: "90%",
     alignSelf: "center",
-
     justifyContent: "space-between",
-
     elevation: 4,
     shadowColor: "#000",
     shadowOpacity: 0.15,
@@ -146,8 +176,8 @@ const styles = StyleSheet.create({
   confirmButton: {
     alignSelf: "center",
     backgroundColor: "#FD1101",
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+    paddingVertical: 14,
+    paddingHorizontal: 36,
     borderRadius: 14,
     marginTop: 24,
   },
