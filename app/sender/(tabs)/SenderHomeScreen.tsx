@@ -3,7 +3,6 @@ import { cancelMedication } from "@/src/api/cancelMedicationApi";
 import { getConfirmationStatus } from "@/src/api/confirmationStatusApi";
 import { confirmMedicationApi } from "@/src/api/confirmMedicationApi";
 import { getMyReceivers } from "@/src/api/retrieveReceiversApi";
-import { senderNotification } from "@/src/api/senderNotificationApi";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -67,7 +66,6 @@ export default function SenderHomeScreen() {
   const handleConfirm = async () => {
     try {
       await confirmMedicationApi();
-      await senderNotification();
       setIsConfirmed(true);
     } catch (err) {
       Alert.alert(
