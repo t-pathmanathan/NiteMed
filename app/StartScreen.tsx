@@ -1,9 +1,12 @@
+import { getCurrentUser } from "@aws-amplify/auth";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { ImageBackground, StyleSheet, Text } from "react-native";
 
 import MainButton from "@/components/MainButton";
+import { bootstrapUserApi } from "@/src/api/userApi";
+
 import { COLORS, FONTS } from "../theme";
 
 const backgroundImage = require("../assets/images/start-screen-background.jpg");
@@ -21,15 +24,37 @@ export default function StartScreen() {
     checkAccountStatus();
   }, []);
 
-  const handlePress = () => {
-    if (hasAccount) {
-      router.push("/LoginScreen");
+  const navigateToHome = async () => {
+    const userProfile = await bootstrapUserApi();
+
+    if (userProfile.role === "takesMeds") {
+      router.replace("/sender/(tabs)/SenderHomeScreen");
     } else {
+      router.replace("/receiver/(tabs)/ReceiverHomeScreen");
+    }
+  };
+
+  const tryAutoLogin = async () => {
+    try {
+      const rememberMe = await SecureStore.getItemAsync("rememberMe");
+
+      if (rememberMe !== "true") {
+        router.push("/LoginScreen");
+        return;
+      }
+
+      await getCurrentUser();
+
+      await navigateToHome();
+    } catch {
       router.push("/LoginScreen");
     }
   };
 
-  // Optional: avoid rendering before check completes
+  const handlePress = () => {
+    tryAutoLogin();
+  };
+
   if (hasAccount === null) {
     return null;
   }
