@@ -2,7 +2,6 @@ import { confirmForgotPasswordApi } from "@/src/api/authApi";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -22,19 +22,27 @@ export default function ResetPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (!code || code.length !== 6) {
-      Alert.alert("Invalid Code", "Please enter the 6-digit code.");
+      Toast.show({
+        type: "error",
+        text1: "Invalid Code",
+        text2: "Please enter the 6-digit code.",
+        position: "top",
+      });
       return;
     }
 
     if (!newPassword || newPassword.length < 8) {
-      Alert.alert(
-        "Invalid Password",
-        "Password must be at least 8 characters long."
-      );
+      Toast.show({
+        type: "error",
+        text1: "Invalid Password",
+        text2: "Password must be at least 8 characters long.",
+        position: "top",
+      });
       return;
     }
 
     setLoading(true);
+
     try {
       await confirmForgotPasswordApi({
         email,
@@ -42,10 +50,21 @@ export default function ResetPasswordScreen() {
         newPassword,
       });
 
-      Alert.alert("Success", "Password reset successfully!");
+      Toast.show({
+        type: "success",
+        text1: "Password Reset",
+        text2: "Your password has been successfully updated.",
+        position: "top",
+      });
+
       router.replace("/LoginScreen");
     } catch (err: any) {
-      Alert.alert("Reset Failed", err.message || "Please try again.");
+      Toast.show({
+        type: "error",
+        text1: "Reset Failed",
+        text2: err.message || "Please try again.",
+        position: "top",
+      });
     } finally {
       setLoading(false);
     }

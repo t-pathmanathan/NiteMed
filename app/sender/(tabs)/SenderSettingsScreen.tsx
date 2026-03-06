@@ -14,6 +14,7 @@ import {
   Text,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 import { deleteAccountApi } from "@/src/api/deleteAccountApi";
 import { getNotificationPreference } from "@/src/api/notificationPreferenceApi";
@@ -87,7 +88,12 @@ export default function SenderSettingsScreen() {
           email: attrs.email ?? "Unknown",
         });
       } catch {
-        Alert.alert("Error", "Failed to load profile");
+        Toast.show({
+          type: "error",
+          text1: "Account Error",
+          text2: "Failed to load account information",
+          position: "top",
+        });
       } finally {
         setLoadingProfile(false);
       }
@@ -106,7 +112,12 @@ export default function SenderSettingsScreen() {
         const user = await bootstrapUserApi();
         setLinkCode(user.linkCode ?? null);
       } catch {
-        Alert.alert("Error", "Failed to load link code");
+        Toast.show({
+          type: "error",
+          text1: "Code Error",
+          text2: "Failed to load link code",
+          position: "top",
+        });
       } finally {
         setLoadingLinkCode(false);
       }
@@ -132,7 +143,12 @@ export default function SenderSettingsScreen() {
         })),
       );
     } catch {
-      Alert.alert("Error", "Failed to load registered receivers");
+      Toast.show({
+        type: "error",
+        text1: "Connection Error",
+        text2: "Failed to load registered receivers",
+        position: "top",
+      });
     } finally {
       setLoadingReceivers(false);
       setRefreshing(false);
@@ -153,8 +169,14 @@ export default function SenderSettingsScreen() {
       const res = await getNotificationPreference();
       setNotificationsEnabled(res.notificationsEnabled ?? true);
     } catch {
-      Alert.alert("Error", "Failed to load notification preference");
-      setNotificationsEnabled(true); // safe fallback
+      Toast.show({
+        type: "error",
+        text1: "Notification Error",
+        text2: "Failed to load notification preference",
+        position: "top",
+      });
+
+      setNotificationsEnabled(true);
     }
   };
 
@@ -178,7 +200,12 @@ export default function SenderSettingsScreen() {
       await unlinkReceiverApi(receiverId);
       await loadConnections(); // refresh cleanly
     } catch {
-      Alert.alert("Error", "Failed to unlink receiver");
+      Toast.show({
+        type: "error",
+        text1: "Unlink Failed",
+        text2: "Failed to unlink receiver",
+        position: "top",
+      });
     }
   };
 
@@ -189,9 +216,13 @@ export default function SenderSettingsScreen() {
     try {
       await toggleNotification(value);
     } catch (error) {
-      Alert.alert("Error", "Failed to update notification preference");
+      Toast.show({
+        type: "error",
+        text1: "Notification Error",
+        text2: "Failed to update notification preference",
+        position: "top",
+      });
 
-      // Revert UI if API fails
       setNotificationsEnabled(!value);
     }
   };
@@ -201,7 +232,12 @@ export default function SenderSettingsScreen() {
       await signOut({ global: true });
       router.replace("/LoginScreen");
     } catch {
-      Alert.alert("Error", "Failed to sign out");
+      Toast.show({
+        type: "error",
+        text1: "Sign-Out Failed",
+        text2: "Failed to sign out",
+        position: "top",
+      });
     }
   };
 
@@ -211,7 +247,12 @@ export default function SenderSettingsScreen() {
       await signOut({ global: true });
       router.replace("/LoginScreen");
     } catch {
-      Alert.alert("Error", "Failed to delete account");
+      Toast.show({
+        type: "error",
+        text1: "Delete Failed",
+        text2: "Failed to delete account",
+        position: "top",
+      });
     }
   };
 

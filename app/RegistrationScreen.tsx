@@ -7,8 +7,9 @@ import { signUpApi } from "@/src/api/authApi";
 import { emailRegex } from "@/src/utils/validators";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import Toast from "react-native-toast-message";
 import { COLORS, FONTS } from "../theme";
 
 export default function RegistrationScreen() {
@@ -36,6 +37,7 @@ export default function RegistrationScreen() {
     if (!isFormValid || !role) return;
 
     setLoading(true);
+
     try {
       await signUpApi({
         email,
@@ -50,7 +52,13 @@ export default function RegistrationScreen() {
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Sign-up failed";
-      Alert.alert("Error", message);
+
+      Toast.show({
+        type: "error",
+        text1: "Sign-Up Failed",
+        text2: message,
+        position: "top",
+      });
     } finally {
       setLoading(false);
     }

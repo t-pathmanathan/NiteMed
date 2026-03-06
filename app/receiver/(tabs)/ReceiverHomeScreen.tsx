@@ -3,7 +3,6 @@ import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 import { sendNudge } from "@/src/api/receiverNotification";
 
@@ -78,7 +78,6 @@ export default function ReceiverHomeScreen() {
       }));
 
       await sendNudge(sender.id);
-      Alert.alert("Nudge sent 🚨");
 
       // Countdown interval
       const interval = setInterval(() => {
@@ -100,7 +99,12 @@ export default function ReceiverHomeScreen() {
         });
       }, 1000);
     } catch (err) {
-      Alert.alert("Failed to send nudge");
+      Toast.show({
+        type: "error",
+        text1: "Nudge Failed",
+        text2: "Failed to nudge",
+        position: "top",
+      });
 
       // Reset immediately if failed
       setNudgeCooldowns((prev) => ({

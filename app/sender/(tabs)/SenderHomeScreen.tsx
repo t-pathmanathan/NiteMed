@@ -7,13 +7,13 @@ import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function SenderHomeScreen() {
   const [receivers, setReceivers] = useState<any[]>([]);
@@ -68,10 +68,13 @@ export default function SenderHomeScreen() {
       await confirmMedicationApi();
       setIsConfirmed(true);
     } catch (err) {
-      Alert.alert(
-        "Error",
-        "We couldn't confirm your check-in. Please try again.",
-      );
+      Toast.show({
+        type: "error",
+        text1: "Confirmation Failed",
+        text2: "We couldn't confirm your check-in. Please try again.",
+        position: "top",
+      });
+
       throw err;
     }
   };
@@ -85,10 +88,13 @@ export default function SenderHomeScreen() {
       await cancelMedication();
       setIsConfirmed(false);
     } catch (err) {
-      Alert.alert(
-        "Error",
-        "We couldn't cancel your confirmation. Please try again.",
-      );
+      Toast.show({
+        type: "error",
+        text1: "Cancel Failed",
+        text2: "We couldn't cancel your confirmation. Please try again.",
+        position: "top",
+      });
+
       throw err;
     }
   };

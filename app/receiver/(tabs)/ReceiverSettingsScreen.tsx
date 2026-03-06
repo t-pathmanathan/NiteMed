@@ -15,6 +15,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 import { deleteAccountApi } from "@/src/api/deleteAccountApi";
 import { linkReceiverApi } from "@/src/api/linkApi";
@@ -88,7 +89,12 @@ export default function ReceiverSettingsScreen() {
           email: attrs.email ?? "Unknown",
         });
       } catch {
-        Alert.alert("Error", "Failed to load account info");
+        Toast.show({
+          type: "error",
+          text1: "Account Error",
+          text2: "Failed to load account information",
+          position: "top",
+        });
       } finally {
         setLoadingProfile(false);
       }
@@ -114,7 +120,12 @@ export default function ReceiverSettingsScreen() {
         })),
       );
     } catch {
-      Alert.alert("Error", "Failed to load registered senders");
+      Toast.show({
+        type: "error",
+        text1: "Connection Error",
+        text2: "Failed to load registered senders",
+        position: "top",
+      });
     } finally {
       setLoadingSenders(false);
       setRefreshing(false);
@@ -135,8 +146,14 @@ export default function ReceiverSettingsScreen() {
       const res = await getNotificationPreference();
       setNotificationsEnabled(res.notificationsEnabled ?? true);
     } catch {
-      Alert.alert("Error", "Failed to load notification preference");
-      setNotificationsEnabled(true); // safe fallback
+      Toast.show({
+        type: "error",
+        text1: "Notification Error",
+        text2: "Failed to load notification preference",
+        position: "top",
+      });
+
+      setNotificationsEnabled(true);
     }
   };
 
@@ -157,23 +174,30 @@ export default function ReceiverSettingsScreen() {
 
   const handleLinkSender = async () => {
     if (!enteredCode.trim()) {
-      Alert.alert("Error", "Please enter a link code");
+      Toast.show({
+        type: "error",
+        text1: "Missing Code",
+        text2: "Please enter a link code",
+        position: "top",
+      });
+
       return;
     }
 
     try {
       setLinking(true);
       await linkReceiverApi(enteredCode.trim().toUpperCase());
-      Alert.alert("Success", "Sender linked successfully");
       setEnteredCode("");
 
       setLoadingSenders(true);
       await loadConnections();
     } catch (error) {
-      Alert.alert(
-        "Link Failed",
-        error instanceof Error ? error.message : "Something went wrong",
-      );
+      Toast.show({
+        type: "error",
+        text1: "Link Failed",
+        text2: error instanceof Error ? error.message : "Something went wrong",
+        position: "top",
+      });
     } finally {
       setLinking(false);
     }
@@ -184,7 +208,12 @@ export default function ReceiverSettingsScreen() {
       await unlinkSenderApi(senderId);
       await loadConnections(); // refresh instead of manual filtering
     } catch {
-      Alert.alert("Error", "Failed to unlink sender");
+      Toast.show({
+        type: "error",
+        text1: "Unlink Failed",
+        text2: "Failed to unlink sender",
+        position: "top",
+      });
     }
   };
 
@@ -195,9 +224,13 @@ export default function ReceiverSettingsScreen() {
     try {
       await toggleNotification(value);
     } catch (error) {
-      Alert.alert("Error", "Failed to update notification preference");
+      Toast.show({
+        type: "error",
+        text1: "Notification Error",
+        text2: "Failed to update notification preference",
+        position: "top",
+      });
 
-      // Revert UI if API fails
       setNotificationsEnabled(!value);
     }
   };
@@ -206,8 +239,13 @@ export default function ReceiverSettingsScreen() {
     try {
       await signOut({ global: true });
       router.replace("/LoginScreen");
-    } catch (error) {
-      console.error("Failed to sign out", error);
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Sign-Out Failed",
+        text2: "Failed to sign out",
+        position: "top",
+      });
     }
   };
 
@@ -217,7 +255,12 @@ export default function ReceiverSettingsScreen() {
       await signOut({ global: true });
       router.replace("/LoginScreen");
     } catch {
-      Alert.alert("Error", "Failed to delete account");
+      Toast.show({
+        type: "error",
+        text1: "Delete Failed",
+        text2: "Failed to delete account",
+        position: "top",
+      });
     }
   };
 

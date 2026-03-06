@@ -4,6 +4,7 @@ import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { Platform, Text } from "react-native";
+import Toast, { ErrorToast, SuccessToast } from "react-native-toast-message";
 
 import outputs from "../amplify_outputs.json";
 
@@ -18,6 +19,56 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+const toastConfig = {
+  error: (props: any) => (
+    <ErrorToast
+      {...props}
+      style={{
+        borderLeftColor: "#FD1101",
+        borderLeftWidth: 5,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+      }}
+      contentContainerStyle={{
+        paddingHorizontal: 15,
+      }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#000",
+      }}
+      text2Style={{
+        fontSize: 14,
+        color: "#333",
+      }}
+    />
+  ),
+
+  success: (props: any) => (
+    <SuccessToast
+      {...props}
+      style={{
+        borderLeftColor: "#FD1101",
+        borderLeftWidth: 5,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+      }}
+      contentContainerStyle={{
+        paddingHorizontal: 15,
+      }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#000",
+      }}
+      text2Style={{
+        fontSize: 14,
+        color: "#333",
+      }}
+    />
+  ),
+};
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -59,13 +110,17 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="StartScreen" />
-      <Stack.Screen name="LoginScreen" />
-      <Stack.Screen name="RegistrationScreen" />
-      <Stack.Screen name="ForgotPasswordScreen" />
-      <Stack.Screen name="ResetPasswordScreen" />
-      <Stack.Screen name="VerifyScreen" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="StartScreen" />
+        <Stack.Screen name="LoginScreen" />
+        <Stack.Screen name="RegistrationScreen" />
+        <Stack.Screen name="ForgotPasswordScreen" />
+        <Stack.Screen name="ResetPasswordScreen" />
+        <Stack.Screen name="VerifyScreen" />
+      </Stack>
+
+      <Toast config={toastConfig} />
+    </>
   );
 }

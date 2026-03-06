@@ -2,7 +2,6 @@ import { forgotPasswordApi } from "@/src/api/authApi";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -19,23 +19,37 @@ export default function ForgotPasswordScreen() {
 
   const handleSendCode = async () => {
     if (!email) {
-      Alert.alert("Missing Email", "Please enter your email address.");
+      Toast.show({
+        type: "error",
+        text1: "Missing Email",
+        text2: "Please enter your email address.",
+        position: "top",
+      });
       return;
     }
 
     setLoading(true);
     try {
       await forgotPasswordApi({ email });
-      Alert.alert(
-        "Code Sent",
-        "A password reset code has been sent to your email."
-      );
+
+      Toast.show({
+        type: "success",
+        text1: "Code Sent",
+        text2: "A password reset code has been sent to your email.",
+        position: "top",
+      });
+
       router.push({
         pathname: "/ResetPasswordScreen",
         params: { email },
       });
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to send reset code.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err?.message || "Failed to send reset code.",
+        position: "top",
+      });
     } finally {
       setLoading(false);
     }
@@ -111,17 +125,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     fontSize: 16,
-    marginBottom: 20,
-    color: "#000",
-  },
-  codeInput: {
-    borderWidth: 1.5,
-    borderColor: "#000",
-    borderRadius: 10,
-    paddingVertical: 14,
-    fontSize: 20,
-    textAlign: "center",
-    letterSpacing: 10,
     marginBottom: 20,
     color: "#000",
   },

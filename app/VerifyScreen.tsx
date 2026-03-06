@@ -2,7 +2,6 @@ import { confirmSignUpApi, resendCodeApi } from "@/src/api/authApi";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function VerifyScreen() {
   const router = useRouter();
@@ -22,17 +22,34 @@ export default function VerifyScreen() {
 
   const handleVerify = async () => {
     if (!code || code.length !== 6) {
-      Alert.alert("Invalid Code", "Please enter the 6-digit code.");
+      Toast.show({
+        type: "error",
+        text1: "Invalid Code",
+        text2: "Please enter the 6-digit code.",
+        position: "top",
+      });
       return;
     }
 
     setLoading(true);
     try {
       await confirmSignUpApi({ email, code });
-      Alert.alert("Success", "Email verified!");
-      router.replace("/LoginScreen"); // prevent back navigation
+
+      Toast.show({
+        type: "success",
+        text1: "Email Verified",
+        text2: "Your account has been verified successfully.",
+        position: "top",
+      });
+
+      router.replace("/LoginScreen");
     } catch (err: any) {
-      Alert.alert("Verification Failed", err.message || "Please try again.");
+      Toast.show({
+        type: "error",
+        text1: "Verification Failed",
+        text2: err?.message || "Please try again.",
+        position: "top",
+      });
     } finally {
       setLoading(false);
     }
@@ -42,12 +59,20 @@ export default function VerifyScreen() {
     setLoading(true);
     try {
       await resendCodeApi({ email });
-      Alert.alert(
-        "Code Sent",
-        "A new verification code has been sent to your email."
-      );
+
+      Toast.show({
+        type: "success",
+        text1: "Code Sent",
+        text2: "A new verification code has been sent to your email.",
+        position: "top",
+      });
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Could not resend code.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err?.message || "Could not resend code.",
+        position: "top",
+      });
     } finally {
       setLoading(false);
     }

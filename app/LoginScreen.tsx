@@ -7,7 +7,8 @@ import { bootstrapUserApi } from "@/src/api/userApi";
 
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Toast from "react-native-toast-message";
 
 import * as SecureStore from "expo-secure-store";
 
@@ -67,7 +68,13 @@ export default function LoginScreen() {
       await navigateToHome();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Sign-in failed";
-      Alert.alert("Error", message);
+
+      Toast.show({
+        type: "error",
+        text1: "Sign-In Failed",
+        text2: message,
+        position: "top",
+      });
     } finally {
       setLoading(false);
     }
