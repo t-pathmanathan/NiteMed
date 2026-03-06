@@ -1,7 +1,13 @@
+import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
-import React, { useState } from "react";
+import { fetchUserAttributes, signOut } from "aws-amplify/auth";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
+  RefreshControl,
   SectionList,
   StyleSheet,
   Switch,
@@ -10,27 +16,39 @@ import {
   View,
 } from "react-native";
 
+import { deleteAccountApi } from "@/src/api/deleteAccountApi";
+import { linkReceiverApi } from "@/src/api/linkApi";
+import { getNotificationPreference } from "@/src/api/notificationPreferenceApi";
+import { getMySenders } from "@/src/api/retrieveSendersApi";
+import { toggleNotification } from "@/src/api/toggleNotificationApi";
+import { unlinkSenderApi } from "@/src/api/unlinkSenderApi";
+
 // -----------------------------------------
 // TYPES
 // -----------------------------------------
 
+type UserProfile = {
+  fullName: string;
+  email: string;
+};
+
 type Sender = {
-  id: number;
+  userId: string;
   name: string;
-  status: "active" | "inactive";
+  createdAt?: string;
+  status?: "active";
 };
 
 type SettingItem =
   | { type: "fullName" }
   | { type: "email" }
-  | { type: "changePassword" }
   | { type: "deleteAccount" }
   | { type: "receiverLinkCode" }
   | { type: "toggleNotifications" }
-  | { type: "appVersion" }
-  | { type: "privacyPolicy" }
-  | { type: "termsOfService" }
-  | Sender; // For Linked Parents section
+  | { type: "signOut" }
+  | { type: "loading" }
+  | { type: "empty" }
+  | Sender;
 
 type SettingsSection = {
   title: string;
@@ -42,23 +60,188 @@ type SettingsSection = {
 // -----------------------------------------
 
 export default function ReceiverSettingsScreen() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [enteredCode, setEnteredCode] = useState("");
+  const router = useRouter();
 
-  const senders: Sender[] = [
-    { id: 1, name: "Sender 1", status: "active" },
-    { id: 2, name: "Sender 2", status: "inactive" },
-  ];
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState<
+    boolean | null
+  >(null);
+  const [enteredCode, setEnteredCode] = useState("");
+  const [linking, setLinking] = useState(false);
+
+  const [senders, setSenders] = useState<Sender[]>([]);
+  const [loadingSenders, setLoadingSenders] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // -----------------------------------------
+  // LOAD PROFILE
+  // -----------------------------------------
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const attrs = await fetchUserAttributes();
+        setUserProfile({
+          fullName: attrs.name ?? "Unknown",
+          email: attrs.email ?? "Unknown",
+        });
+      } catch {
+        Alert.alert("Error", "Failed to load account info");
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  // -----------------------------------------
+  // LOAD CONNECTIONS (Reusable)
+  // -----------------------------------------
+
+  const loadConnections = async () => {
+    try {
+      const res = await getMySenders();
+
+      setSenders(
+        res.connections.map((c: any) => ({
+          userId: c.userId,
+          name: c.fullName,
+          createdAt: c.createdAt,
+          status: "active",
+        })),
+      );
+    } catch {
+      Alert.alert("Error", "Failed to load registered senders");
+    } finally {
+      setLoadingSenders(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    loadConnections();
+  }, []);
+
+  // -----------------------------------------
+  // LOAD NOTIFICATION PREFERENCE
+  // -----------------------------------------
+
+  const loadNotificationPreference = async () => {
+    try {
+      const res = await getNotificationPreference();
+      setNotificationsEnabled(res.notificationsEnabled ?? true);
+    } catch {
+      Alert.alert("Error", "Failed to load notification preference");
+      setNotificationsEnabled(true); // safe fallback
+    }
+  };
+
+  useEffect(() => {
+    loadNotificationPreference();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadConnections();
+      loadNotificationPreference();
+    }, []),
+  );
+
+  // -----------------------------------------
+  // LINK HANDLER
+  // -----------------------------------------
+
+  const handleLinkSender = async () => {
+    if (!enteredCode.trim()) {
+      Alert.alert("Error", "Please enter a link code");
+      return;
+    }
+
+    try {
+      setLinking(true);
+      await linkReceiverApi(enteredCode.trim().toUpperCase());
+      Alert.alert("Success", "Sender linked successfully");
+      setEnteredCode("");
+
+      setLoadingSenders(true);
+      await loadConnections();
+    } catch (error) {
+      Alert.alert(
+        "Link Failed",
+        error instanceof Error ? error.message : "Something went wrong",
+      );
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  const handleUnlinkSender = async (senderId: string) => {
+    try {
+      await unlinkSenderApi(senderId);
+      await loadConnections(); // refresh instead of manual filtering
+    } catch {
+      Alert.alert("Error", "Failed to unlink sender");
+    }
+  };
+
+  const handleToggleNotifications = async (value: boolean) => {
+    // Optimistically update UI first
+    setNotificationsEnabled(value);
+
+    try {
+      await toggleNotification(value);
+    } catch (error) {
+      Alert.alert("Error", "Failed to update notification preference");
+
+      // Revert UI if API fails
+      setNotificationsEnabled(!value);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ global: true });
+      router.replace("/LoginScreen");
+    } catch (error) {
+      console.error("Failed to sign out", error);
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    try {
+      await deleteAccountApi();
+      await signOut({ global: true });
+      router.replace("/LoginScreen");
+    } catch {
+      Alert.alert("Error", "Failed to delete account");
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently delete your account and all linked data. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: confirmDeleteAccount },
+      ],
+    );
+  };
+
+  // -----------------------------------------
+  // SECTIONS
+  // -----------------------------------------
 
   const SECTIONS: SettingsSection[] = [
     {
       title: "Account",
-      data: [
-        { type: "fullName" },
-        { type: "email" },
-        { type: "changePassword" },
-        { type: "deleteAccount" },
-      ],
+      data: loadingProfile
+        ? [{ type: "loading" }]
+        : [{ type: "fullName" }, { type: "email" }],
     },
     {
       title: "Link Code",
@@ -66,19 +249,19 @@ export default function ReceiverSettingsScreen() {
     },
     {
       title: "Registered Senders",
-      data: senders,
+      data: loadingSenders
+        ? [{ type: "loading" }]
+        : senders.length === 0
+          ? [{ type: "empty" }]
+          : senders,
     },
     {
       title: "Notifications",
       data: [{ type: "toggleNotifications" }],
     },
     {
-      title: "About",
-      data: [
-        { type: "appVersion" },
-        { type: "privacyPolicy" },
-        { type: "termsOfService" },
-      ],
+      title: "Session",
+      data: [{ type: "signOut" }, { type: "deleteAccount" }],
     },
   ];
 
@@ -93,89 +276,77 @@ export default function ReceiverSettingsScreen() {
     item: SettingItem;
     section: SettingsSection;
   }) => {
-    // Sender rows (list of linked senders)
-    if (
-      section.title === "Registered Senders" &&
-      "name" in item &&
-      "status" in item
-    ) {
-      return <SenderRow sender={item} />;
+    if ("type" in item && item.type === "loading") {
+      return (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator size="small" color="#FD1101" />
+        </View>
+      );
+    }
+
+    if ("type" in item && item.type === "empty") {
+      return (
+        <View style={styles.emptyRow}>
+          <Text style={styles.emptyText}>No registered senders yet</Text>
+        </View>
+      );
+    }
+
+    if (section.title === "Registered Senders" && "name" in item) {
+      return <SenderRow sender={item} onUnlink={handleUnlinkSender} />;
     }
 
     if ("type" in item) {
       switch (item.type) {
         case "fullName":
-          return (
-            <SettingRow
-              label="Full Name"
-              right={<Feather name="edit" size={20} color="black" />}
-            />
-          );
-
+          return <SettingRow label={userProfile?.fullName ?? ""} />;
         case "email":
-          return (
-            <SettingRow
-              label="Email"
-              right={<Feather name="edit" size={20} color="black" />}
-            />
-          );
-
-        case "changePassword":
-          return (
-            <SettingRow
-              label="Change Password"
-              right={<Feather name="edit" size={20} color="black" />}
-            />
-          );
-
+          return <SettingRow label={userProfile?.email ?? ""} />;
         case "deleteAccount":
           return (
             <SettingRow
               label="Delete Account"
-              right={<Text style={{ color: "red" }}>Delete</Text>}
+              onPress={handleDeleteAccount}
+              right={<AntDesign name="delete" size={20} color="#FD1101" />}
             />
           );
-
         case "receiverLinkCode":
           return (
             <ReceiverLinkCodeCard
               enteredCode={enteredCode}
               onChangeCode={setEnteredCode}
+              onSubmit={handleLinkSender}
+              loading={linking}
             />
           );
-
         case "toggleNotifications":
           return (
             <SettingRow
               label="Allow Notifications"
               right={
                 <Switch
-                  value={notificationsEnabled}
-                  onValueChange={setNotificationsEnabled}
+                  value={notificationsEnabled ?? false}
+                  onValueChange={handleToggleNotifications}
+                  disabled={notificationsEnabled === null}
                   thumbColor={notificationsEnabled ? "#FD1101" : "#f4f3f4"}
                   trackColor={{ false: "#767577", true: "#ffd6d3" }}
                 />
               }
             />
           );
-
-        case "appVersion":
-          return <SettingRow label="App Version" right={<Text>1.0.0</Text>} />;
-
-        case "privacyPolicy":
-          return <SettingRow label="Privacy Policy" />;
-
-        case "termsOfService":
-          return <SettingRow label="Terms of Service" />;
+        case "signOut":
+          return (
+            <SettingRow
+              label="Sign Out"
+              onPress={handleSignOut}
+              right={<AntDesign name="logout" size={20} color="#FD1101" />}
+            />
+          );
       }
     }
 
     return null;
   };
-
-  // -----------------------------------------
-  // RENDER SCREEN
-  // -----------------------------------------
 
   return (
     <View style={styles.container}>
@@ -187,15 +358,24 @@ export default function ReceiverSettingsScreen() {
           <Text style={styles.sectionHeader}>{section.title}</Text>
         )}
         stickySectionHeadersEnabled={false}
-        SectionSeparatorComponent={() => <View style={{ height: 8 }} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadConnections();
+            }}
+            tintColor="#FD1101"
+          />
+        }
+        contentContainerStyle={{ paddingBottom: 120 }}
       />
     </View>
   );
 }
 
-//
 // -----------------------------------------
-// REUSABLE COMPONENTS
+// REUSABLE COMPONENTS (UNCHANGED)
 // -----------------------------------------
 
 type SettingRowProps = {
@@ -211,147 +391,79 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, right, onPress }) => (
   </Pressable>
 );
 
-// // Receiver Link Code — flipped version of sender side
-
 const ReceiverLinkCodeCard = ({
   enteredCode,
   onChangeCode,
+  onSubmit,
+  loading,
 }: {
   enteredCode: string;
   onChangeCode: (t: string) => void;
-}) => {
-  return (
-    <View style={styles.receiverCard}>
-      {/* Centered input */}
-      <TextInput
-        placeholder="Enter Link Code"
-        value={enteredCode}
-        onChangeText={onChangeCode}
-        style={styles.receiverInput}
-        autoCapitalize="characters"
-      />
+  onSubmit: () => void;
+  loading: boolean;
+}) => (
+  <View style={styles.receiverCard}>
+    <TextInput
+      placeholder="Enter Link Code"
+      value={enteredCode}
+      placeholderTextColor={"#AAA"}
+      onChangeText={onChangeCode}
+      style={styles.receiverInput}
+      autoCapitalize="characters"
+      maxLength={9}
+    />
+    <View style={styles.receiverButtons}>
+      <Pressable style={styles.receiverScanBtn}>
+        <Feather name="camera" size={20} color="#FD1101" />
+        <Text style={styles.receiverScanText}>Scan QR Code</Text>
+      </Pressable>
 
-      {/* Stacked buttons */}
-      <View style={styles.receiverButtons}>
-        {/* Scan QR button (icon + outline) */}
-        <Pressable style={styles.receiverScanBtn}>
-          <Feather name="camera" size={20} color="#FD1101" />
-          <Text style={styles.receiverScanText}>Scan QR Code</Text>
-        </Pressable>
-
-        {/* Submit / Link Account Button */}
-        <Pressable style={styles.receiverPrimaryBtn}>
+      <Pressable
+        style={[styles.receiverPrimaryBtn, loading && { opacity: 0.7 }]}
+        onPress={onSubmit}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="white" />
+        ) : (
           <Text style={styles.receiverPrimaryText}>Submit / Link Sender</Text>
-        </Pressable>
+        )}
+      </Pressable>
+    </View>
+  </View>
+);
+
+const SenderRow = ({
+  sender,
+  onUnlink,
+}: {
+  sender: Sender;
+  onUnlink: (id: string) => void;
+}) => (
+  <View style={styles.receiverRow}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <Text style={styles.receiverName}>{sender.name}</Text>
+      <View style={[styles.statusBadge, styles.badgeTaken]}>
+        <Text style={{ fontSize: 12, color: "#2E7D32" }}>Active</Text>
       </View>
     </View>
-  );
-};
 
-type SenderRowProps = {
-  sender: Sender;
-};
-
-// Sender list row
-const SenderRow: React.FC<SenderRowProps> = ({ sender }) => (
-  <View style={styles.receiverRow}>
-    <View>
-      <Text style={styles.receiverName}>{sender.name}</Text>
-      <Text
-        style={{
-          color: sender.status === "active" ? "green" : "gray",
-          fontSize: 12,
-        }}
-      >
-        {sender.status}
-      </Text>
-    </View>
-
-    <Pressable>
+    <Pressable onPress={() => onUnlink(sender.userId)}>
       <Text style={{ color: "#FD1101", fontWeight: "600" }}>Unlink</Text>
     </Pressable>
   </View>
 );
 
-//
 // -----------------------------------------
-// STYLES
+// STYLES (UNCHANGED)
 // -----------------------------------------
 
 const styles = StyleSheet.create({
-  receiverCard: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    alignItems: "center",
-  },
-
-  receiverInput: {
-    width: "90%",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    fontSize: 18,
-    backgroundColor: "#FAFAFA",
-    textAlign: "center",
-    letterSpacing: 1.5,
-    marginBottom: 20,
-  },
-
-  receiverButtons: {
-    width: "100%",
-    gap: 12,
-    alignItems: "center",
-  },
-
-  receiverPrimaryBtn: {
-    width: "90%",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: "#FD1101",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  receiverPrimaryText: {
-    fontSize: 15,
-    color: "white",
-    fontWeight: "600",
-  },
-
-  receiverScanBtn: {
-    width: "90%",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#FD1101",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  receiverScanText: {
-    fontSize: 15,
-    color: "#FD1101",
-    fontWeight: "600",
-  },
-
   container: {
     flex: 1,
     backgroundColor: "#FD1101",
     paddingTop: 12,
   },
-
   sectionHeader: {
     fontSize: 14,
     fontWeight: "600",
@@ -360,85 +472,63 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 6,
   },
-
   row: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    padding: 16,
     backgroundColor: "white",
-    borderBottomColor: "#E5E5E5",
-    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  rowLabel: { fontSize: 16 },
+  receiverCard: {
+    backgroundColor: "white",
+    margin: 16,
+    padding: 24,
+    borderRadius: 12,
     alignItems: "center",
   },
-
-  rowLabel: {
-    fontSize: 16,
-    color: "#111",
-  },
-
-  card: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
+  receiverInput: {
+    width: "90%",
     borderWidth: 1,
     borderColor: "#E5E5E5",
+    paddingVertical: 18,
+    borderRadius: 10,
+    marginBottom: 24,
+    textAlign: "center",
+    fontSize: 28,
+    fontWeight: "bold",
+    letterSpacing: 2,
+    color: "#111",
   },
-
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#DDD",
+  receiverButtons: { width: "100%", gap: 12, alignItems: "center" },
+  receiverPrimaryBtn: {
+    width: "90%",
     padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-    backgroundColor: "#FAFAFA",
-  },
-
-  cardButtons: {
-    flexDirection: "row",
-    marginTop: 14,
-    gap: 10,
-    alignItems: "center",
-  },
-
-  cardBtn: {
-    flex: 1,
-    paddingVertical: 12,
+    borderRadius: 10,
     backgroundColor: "#FD1101",
-    borderRadius: 8,
     alignItems: "center",
   },
-
-  cardBtnText: {
-    fontSize: 15,
-    color: "white",
-    fontWeight: "600",
-  },
-
-  qrButton: {
-    padding: 10,
+  receiverPrimaryText: { color: "white", fontWeight: "600" },
+  receiverScanBtn: {
+    width: "90%",
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#FD1101",
-    borderRadius: 8,
+    flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
+    gap: 10,
   },
-
+  receiverScanText: { color: "#FD1101", fontWeight: "600" },
   receiverRow: {
     backgroundColor: "white",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomColor: "#E5E5E5",
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    padding: 16,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
   },
-
-  receiverName: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
+  receiverName: { fontSize: 16, fontWeight: "500" },
+  loadingRow: { backgroundColor: "white", padding: 20, alignItems: "center" },
+  emptyRow: { backgroundColor: "white", padding: 20, alignItems: "center" },
+  emptyText: { color: "#999", fontSize: 14 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  badgeTaken: { backgroundColor: "#D6F5D6" },
 });

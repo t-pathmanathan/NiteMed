@@ -1,16 +1,58 @@
 import { Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
 import { Amplify } from "aws-amplify";
+import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
-import { Text } from "react-native";
+import { useEffect } from "react";
+import { Platform, Text } from "react-native";
 
 import outputs from "../amplify_outputs.json";
 
 Amplify.configure(outputs);
 
+// 👇 Foreground notification behavior
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Poppins_700Bold,
   });
+
+  // 👇 Create Android notification channel ON APP START
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      // 🔹 Default channel (Confirm notifications)
+      Notifications.setNotificationChannelAsync("default", {
+        name: "Default Notifications",
+        importance: Notifications.AndroidImportance.DEFAULT,
+        sound: "default",
+        vibrationPattern: [0, 250, 250, 250],
+        enableVibrate: true,
+        enableLights: true,
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+
+      // 🚨 Alarm channel (Nudge notifications)
+      Notifications.setNotificationChannelAsync("alarm-channel", {
+        name: "Medication Alarm",
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+        vibrationPattern: [0, 500, 500, 500, 500],
+        enableVibrate: true,
+        enableLights: true,
+        bypassDnd: true,
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+    }
+  }, []);
 
   if (!fontsLoaded) {
     return <Text>Loading...</Text>;

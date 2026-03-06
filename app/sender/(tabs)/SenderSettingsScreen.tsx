@@ -1,8 +1,13 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
-import React, { useState } from "react";
+import { fetchUserAttributes, signOut } from "aws-amplify/auth";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
+  RefreshControl,
   SectionList,
   StyleSheet,
   Switch,
@@ -10,27 +15,39 @@ import {
   View,
 } from "react-native";
 
+import { deleteAccountApi } from "@/src/api/deleteAccountApi";
+import { getNotificationPreference } from "@/src/api/notificationPreferenceApi";
+import { getMyReceivers } from "@/src/api/retrieveReceiversApi";
+import { toggleNotification } from "@/src/api/toggleNotificationApi";
+import { unlinkReceiverApi } from "@/src/api/unlinkReceiverApi";
+import { bootstrapUserApi } from "@/src/api/userApi";
+
 // -----------------------------------------
 // TYPES
 // -----------------------------------------
 
+type UserProfile = {
+  fullName: string;
+  email: string;
+};
+
 type Receiver = {
-  id: number;
+  userId: string;
   name: string;
-  status: "active" | "inactive";
+  createdAt?: string;
+  status?: "active";
 };
 
 type SettingItem =
   | { type: "fullName" }
   | { type: "email" }
-  | { type: "changePassword" }
   | { type: "deleteAccount" }
   | { type: "linkCodeCard" }
   | { type: "toggleNotifications" }
-  | { type: "appVersion" }
-  | { type: "privacyPolicy" }
-  | { type: "termsOfService" }
-  | Receiver; // For Registered Receivers section
+  | { type: "signOut" }
+  | { type: "loading" }
+  | { type: "empty" }
+  | Receiver;
 
 type SettingsSection = {
   title: string;
@@ -41,23 +58,184 @@ type SettingsSection = {
 // MAIN SCREEN
 // -----------------------------------------
 
-export default function SettingsScreen() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+export default function SenderSettingsScreen() {
+  const router = useRouter();
 
-  const receivers: Receiver[] = [
-    { id: 1, name: "Receiver 1", status: "active" },
-    { id: 2, name: "Receiver 2", status: "inactive" },
-  ];
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState<
+    boolean | null
+  >(null);
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [loadingLinkCode, setLoadingLinkCode] = useState(true);
+
+  const [receivers, setReceivers] = useState<Receiver[]>([]);
+  const [loadingReceivers, setLoadingReceivers] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // -----------------------------------------
+  // LOAD PROFILE
+  // -----------------------------------------
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const attrs = await fetchUserAttributes();
+        setUserProfile({
+          fullName: attrs.name ?? "Unknown",
+          email: attrs.email ?? "Unknown",
+        });
+      } catch {
+        Alert.alert("Error", "Failed to load profile");
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  // -----------------------------------------
+  // LOAD LINK CODE
+  // -----------------------------------------
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const user = await bootstrapUserApi();
+        setLinkCode(user.linkCode ?? null);
+      } catch {
+        Alert.alert("Error", "Failed to load link code");
+      } finally {
+        setLoadingLinkCode(false);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  // -----------------------------------------
+  // LOAD CONNECTIONS (Reusable)
+  // -----------------------------------------
+
+  const loadConnections = async () => {
+    try {
+      const res = await getMyReceivers();
+
+      setReceivers(
+        res.connections.map((c: any) => ({
+          userId: c.userId,
+          name: c.fullName,
+          createdAt: c.createdAt,
+          status: "active",
+        })),
+      );
+    } catch {
+      Alert.alert("Error", "Failed to load registered receivers");
+    } finally {
+      setLoadingReceivers(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    loadConnections();
+  }, []);
+
+  // -----------------------------------------
+  // LOAD NOTIFICATION PREFERENCE
+  // -----------------------------------------
+
+  const loadNotificationPreference = async () => {
+    try {
+      const res = await getNotificationPreference();
+      setNotificationsEnabled(res.notificationsEnabled ?? true);
+    } catch {
+      Alert.alert("Error", "Failed to load notification preference");
+      setNotificationsEnabled(true); // safe fallback
+    }
+  };
+
+  useEffect(() => {
+    loadNotificationPreference();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadConnections();
+      loadNotificationPreference();
+    }, []),
+  );
+
+  // -----------------------------------------
+  // HANDLERS
+  // -----------------------------------------
+
+  const handleUnlinkReceiver = async (receiverId: string) => {
+    try {
+      await unlinkReceiverApi(receiverId);
+      await loadConnections(); // refresh cleanly
+    } catch {
+      Alert.alert("Error", "Failed to unlink receiver");
+    }
+  };
+
+  const handleToggleNotifications = async (value: boolean) => {
+    // Optimistically update UI first
+    setNotificationsEnabled(value);
+
+    try {
+      await toggleNotification(value);
+    } catch (error) {
+      Alert.alert("Error", "Failed to update notification preference");
+
+      // Revert UI if API fails
+      setNotificationsEnabled(!value);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ global: true });
+      router.replace("/LoginScreen");
+    } catch {
+      Alert.alert("Error", "Failed to sign out");
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    try {
+      await deleteAccountApi();
+      await signOut({ global: true });
+      router.replace("/LoginScreen");
+    } catch {
+      Alert.alert("Error", "Failed to delete account");
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently delete your account and all linked data. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: confirmDeleteAccount },
+      ],
+    );
+  };
+
+  // -----------------------------------------
+  // SECTIONS
+  // -----------------------------------------
 
   const SECTIONS: SettingsSection[] = [
     {
       title: "Account",
-      data: [
-        { type: "fullName" },
-        { type: "email" },
-        { type: "changePassword" },
-        { type: "deleteAccount" },
-      ],
+      data: loadingProfile
+        ? [{ type: "loading" }]
+        : [{ type: "fullName" }, { type: "email" }],
     },
     {
       title: "Link Code",
@@ -65,19 +243,19 @@ export default function SettingsScreen() {
     },
     {
       title: "Registered Receivers",
-      data: receivers,
+      data: loadingReceivers
+        ? [{ type: "loading" }]
+        : receivers.length === 0
+          ? [{ type: "empty" }]
+          : receivers,
     },
     {
       title: "Notifications",
       data: [{ type: "toggleNotifications" }],
     },
     {
-      title: "About",
-      data: [
-        { type: "appVersion" },
-        { type: "privacyPolicy" },
-        { type: "termsOfService" },
-      ],
+      title: "Session",
+      data: [{ type: "signOut" }, { type: "deleteAccount" }],
     },
   ];
 
@@ -92,52 +270,45 @@ export default function SettingsScreen() {
     item: SettingItem;
     section: SettingsSection;
   }) => {
-    // Receiver rows — identified by section title + presence of name property
-    if (
-      section.title === "Registered Receivers" &&
-      "name" in item &&
-      "status" in item
-    ) {
-      return <ReceiverRow receiver={item} />;
+    if ("type" in item && item.type === "loading") {
+      return (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator size="small" color="#FD1101" />
+        </View>
+      );
     }
 
-    // Typed switch for settings rows
+    if ("type" in item && item.type === "empty") {
+      return (
+        <View style={styles.emptyRow}>
+          <Text style={styles.emptyText}>No registered receivers yet</Text>
+        </View>
+      );
+    }
+
+    if (section.title === "Registered Receivers" && "name" in item) {
+      return <ReceiverRow receiver={item} onUnlink={handleUnlinkReceiver} />;
+    }
+
     if ("type" in item) {
       switch (item.type) {
         case "fullName":
-          return (
-            <SettingRow
-              label="Full Name"
-              right={<Feather name="edit" size={20} color="black" />}
-            />
-          );
+          return <SettingRow label={userProfile?.fullName ?? ""} />;
 
         case "email":
-          return (
-            <SettingRow
-              label="Email"
-              right={<Feather name="edit" size={20} color="black" />}
-            />
-          );
-
-        case "changePassword":
-          return (
-            <SettingRow
-              label="Change Password"
-              right={<Feather name="edit" size={20} color="black" />}
-            />
-          );
+          return <SettingRow label={userProfile?.email ?? ""} />;
 
         case "deleteAccount":
           return (
             <SettingRow
               label="Delete Account"
-              right={<Text style={{ color: "red" }}>Delete</Text>}
+              onPress={handleDeleteAccount}
+              right={<AntDesign name="delete" size={20} color="#FD1101" />}
             />
           );
 
         case "linkCodeCard":
-          return <LinkCodeCard />;
+          return <LinkCodeCard linkCode={linkCode} loading={loadingLinkCode} />;
 
         case "toggleNotifications":
           return (
@@ -145,8 +316,9 @@ export default function SettingsScreen() {
               label="Allow Notifications"
               right={
                 <Switch
-                  value={notificationsEnabled}
-                  onValueChange={setNotificationsEnabled}
+                  value={notificationsEnabled ?? false}
+                  onValueChange={handleToggleNotifications}
+                  disabled={notificationsEnabled === null}
                   thumbColor={notificationsEnabled ? "#FD1101" : "#f4f3f4"}
                   trackColor={{ false: "#767577", true: "#ffd6d3" }}
                 />
@@ -154,14 +326,14 @@ export default function SettingsScreen() {
             />
           );
 
-        case "appVersion":
-          return <SettingRow label="App Version" right={<Text>1.0.0</Text>} />;
-
-        case "privacyPolicy":
-          return <SettingRow label="Privacy Policy" />;
-
-        case "termsOfService":
-          return <SettingRow label="Terms of Service" />;
+        case "signOut":
+          return (
+            <SettingRow
+              label="Sign Out"
+              onPress={handleSignOut}
+              right={<AntDesign name="logout" size={20} color="#FD1101" />}
+            />
+          );
       }
     }
 
@@ -182,15 +354,24 @@ export default function SettingsScreen() {
           <Text style={styles.sectionHeader}>{section.title}</Text>
         )}
         stickySectionHeadersEnabled={false}
-        SectionSeparatorComponent={() => <View style={{ height: 8 }} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadConnections();
+            }}
+            tintColor="#FD1101"
+          />
+        }
+        contentContainerStyle={{ paddingBottom: 120 }}
       />
     </View>
   );
 }
 
-//
 // -----------------------------------------
-// REUSABLE COMPONENTS (with types)
+// REUSABLE COMPONENTS
 // -----------------------------------------
 
 type SettingRowProps = {
@@ -206,33 +387,41 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, right, onPress }) => (
   </Pressable>
 );
 
-const LinkCodeCard: React.FC = () => {
-  const linkCode = "93KD-TY72";
+const LinkCodeCard = ({
+  linkCode,
+  loading,
+}: {
+  linkCode: string | null;
+  loading: boolean;
+}) => {
+  if (loading) {
+    return (
+      <View style={styles.senderCard}>
+        <Text style={{ color: "gray" }}>Loading link code...</Text>
+      </View>
+    );
+  }
+
+  if (!linkCode) {
+    return (
+      <View style={styles.senderCard}>
+        <Text style={{ color: "gray" }}>No link code available</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.senderCard}>
-      {/* Link Code Display */}
       <Text style={styles.senderCardCode}>{linkCode}</Text>
 
-      {/* Buttons stacked vertically */}
       <View style={styles.senderCardButtons}>
         <Pressable style={styles.senderBtn}>
-          <AntDesign
-            name="qrcode"
-            size={20}
-            color="#FD1101"
-            style={styles.senderIcon}
-          />
+          <AntDesign name="qrcode" size={20} color="#FD1101" />
           <Text style={styles.senderBtnText}>Generate QR Code</Text>
         </Pressable>
 
         <Pressable style={styles.senderBtn}>
-          <Feather
-            name="copy"
-            size={20}
-            color="#FD1101"
-            style={styles.senderIcon}
-          />
+          <Feather name="copy" size={20} color="#FD1101" />
           <Text style={styles.senderBtnText}>Copy Code</Text>
         </Pressable>
       </View>
@@ -240,33 +429,30 @@ const LinkCodeCard: React.FC = () => {
   );
 };
 
-type ReceiverRowProps = {
+const ReceiverRow = ({
+  receiver,
+  onUnlink,
+}: {
   receiver: Receiver;
-};
-
-const ReceiverRow: React.FC<ReceiverRowProps> = ({ receiver }) => (
+  onUnlink: (id: string) => void;
+}) => (
   <View style={styles.receiverRow}>
-    <View>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <Text style={styles.receiverName}>{receiver.name}</Text>
-      <Text
-        style={{
-          color: receiver.status === "active" ? "green" : "gray",
-          fontSize: 12,
-        }}
-      >
-        {receiver.status}
-      </Text>
+
+      <View style={[styles.statusBadge, styles.badgeTaken]}>
+        <Text style={{ fontSize: 12, color: "#2E7D32" }}>Active</Text>
+      </View>
     </View>
 
-    <Pressable>
-      <Text style={{ color: "#FD1101", fontWeight: "600" }}>Remove</Text>
+    <Pressable onPress={() => onUnlink(receiver.userId)}>
+      <Text style={{ color: "#FD1101", fontWeight: "600" }}>Unlink</Text>
     </Pressable>
   </View>
 );
 
-//
 // -----------------------------------------
-// STYLES
+// STYLES (UNCHANGED)
 // -----------------------------------------
 
 const styles = StyleSheet.create({
@@ -281,22 +467,18 @@ const styles = StyleSheet.create({
     borderColor: "#E5E5E5",
     alignItems: "center",
   },
-
   senderCardCode: {
     fontSize: 28,
     fontWeight: "bold",
     letterSpacing: 2,
     marginBottom: 22,
     color: "#111",
-    textAlign: "center",
   },
-
   senderCardButtons: {
     width: "100%",
     gap: 12,
     alignItems: "center",
   },
-
   senderBtn: {
     width: "90%",
     paddingVertical: 12,
@@ -309,23 +491,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-
-  senderIcon: {
-    marginRight: 4,
-  },
-
   senderBtnText: {
     fontSize: 15,
     color: "#FD1101",
     fontWeight: "600",
   },
-
   container: {
     flex: 1,
     backgroundColor: "#FD1101",
     paddingTop: 12,
   },
-
   sectionHeader: {
     fontSize: 14,
     fontWeight: "600",
@@ -334,7 +509,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 6,
   },
-
   row: {
     paddingVertical: 16,
     paddingHorizontal: 16,
@@ -345,44 +519,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   rowLabel: {
     fontSize: 16,
     color: "#111",
   },
-
-  card: {
-    backgroundColor: "white",
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-  },
-
-  cardCode: {
-    fontSize: 22,
-    fontWeight: "bold",
-  },
-
-  cardButtons: {
-    flexDirection: "row",
-    marginTop: 14,
-    gap: 10,
-  },
-
-  cardBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: "#EFEFEF",
-    borderRadius: 8,
-  },
-
-  cardBtnText: {
-    fontSize: 14,
-  },
-
   receiverRow: {
     backgroundColor: "white",
     paddingVertical: 16,
@@ -393,9 +533,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   receiverName: {
     fontSize: 16,
     fontWeight: "500",
+  },
+  loadingRow: {
+    backgroundColor: "white",
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyRow: {
+    backgroundColor: "white",
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyText: {
+    color: "#999",
+    fontSize: 14,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  badgeTaken: {
+    backgroundColor: "#D6F5D6",
   },
 });

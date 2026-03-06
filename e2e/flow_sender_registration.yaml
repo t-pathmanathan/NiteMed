@@ -2,16 +2,16 @@ appId: com.thilochan.NiteMed
 ---
 - tapOn:
     id: "input_fullName"
-- inputText: "Thilochan Pathmanathan"
+- inputText: "Sender"
 - tapOn:
     id: "input_email"
 - inputText: "thilochan@gmail.com"
 - tapOn:
     id: "input_password"
-- inputText: "StrongPass123!"
+- inputText: "SenderPass123!"
 - tapOn:
     id: "input_confirmPassword"
-- inputText: "StrongPass123!"
+- inputText: "SenderPass123!"
 - tapOn:
     id: "role_takesMeds"
 - tapOn:
