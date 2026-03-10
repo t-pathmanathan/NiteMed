@@ -1,63 +1,41 @@
 import LabeledGeneralInput from "@/components/LabeledGeneralInput";
 import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import MainButton from "@/components/MainButton";
-
 import { signInApi } from "@/src/api/authApi";
 import { bootstrapUserApi } from "@/src/api/userApi";
-
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Toast from "react-native-toast-message";
-
-import * as SecureStore from "expo-secure-store";
-
-import { Checkbox } from "expo-checkbox";
+import { COLORS, FONTS } from "../theme";
 
 import { saveExpoPushToken } from "@/src/api/registerNotificationApi";
 import { registerPushNotifications } from "@/src/utils/registerPushNotifications";
-
-import { COLORS, FONTS } from "../theme";
+import * as SecureStore from "expo-secure-store";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const isFormValid = emailRegex.test(email) && password.length > 0;
-
-  const navigateToHome = async () => {
-    const userProfile = await bootstrapUserApi();
-
-    if (userProfile.role === "takesMeds") {
-      router.replace("/sender/(tabs)/SenderHomeScreen");
-    } else if (userProfile.role === "tracksMeds") {
-      router.replace("/receiver/(tabs)/ReceiverHomeScreen");
-    } else {
-      throw new Error("Invalid user role");
-    }
-  };
 
   const handleSignIn = async () => {
     if (!isFormValid) return;
 
     setLoading(true);
-
     try {
-      await signInApi({ email, password });
+      await signInApi({
+        email,
+        password,
+      });
 
       await SecureStore.setItemAsync("hasSignedInBefore", "true");
 
-      await SecureStore.setItemAsync(
-        "rememberMe",
-        rememberMe ? "true" : "false",
-      );
+      const userProfile = await bootstrapUserApi();
 
       const token = await registerPushNotifications();
 
@@ -65,13 +43,19 @@ export default function LoginScreen() {
         await saveExpoPushToken(token);
       }
 
-      await navigateToHome();
+      if (userProfile.role === "takesMeds") {
+        router.replace("/sender/(tabs)/SenderHomeScreen");
+      } else if (userProfile.role === "tracksMeds") {
+        router.replace("/receiver/(tabs)/ReceiverHomeScreen");
+      } else {
+        throw new Error("Invalid user role");
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Sign-in failed";
 
       Toast.show({
         type: "error",
-        text1: "Sign-In Failed",
+        text1: "Login Failed",
         text2: message,
         position: "top",
       });
@@ -83,7 +67,6 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.screenTitle}>Login</Text>
-
       <LabeledGeneralInput
         label="Email"
         value={email}
@@ -91,38 +74,23 @@ export default function LoginScreen() {
         keyboardType="email-address"
         testID="input_email"
       />
-
       <LabeledPasswordInput
         label="Password"
         value={password}
         onChangeText={setPassword}
         testID="input_password"
       />
-
-      {/* Remember + Forgot */}
-      <View style={styles.optionsRow}>
-        <View style={styles.rememberContainer}>
-          <Checkbox
-            style={styles.checkbox}
-            value={rememberMe}
-            onValueChange={setRememberMe}
-            color={rememberMe ? "#FD1101" : undefined}
-            testID="checkbox_rememberMe"
-          />
-          <Text style={styles.rememberText}>Remember Me</Text>
-        </View>
-
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: "/ForgotPasswordScreen",
-              params: email ? { email } : undefined,
-            })
-          }
-        >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </Pressable>
-      </View>
+      <Pressable
+        style={styles.forgotPasswordContainer}
+        onPress={() =>
+          router.push({
+            pathname: "/ForgotPasswordScreen",
+            params: email ? { email } : undefined,
+          })
+        }
+      >
+        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+      </Pressable>
 
       <View style={styles.buttonContainer}>
         <MainButton
@@ -131,6 +99,17 @@ export default function LoginScreen() {
           disabled={!isFormValid || loading}
           testID="btn_login"
         />
+      </View>
+      <View style={styles.registerContainer}>
+        <Text style={styles.registerText}>
+          Don't have an account?{" "}
+          <Text
+            style={styles.registerLink}
+            onPress={() => router.replace("/RegistrationScreen")}
+          >
+            Register
+          </Text>
+        </Text>
       </View>
     </View>
   );
@@ -143,47 +122,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 80,
   },
-
   screenTitle: {
     fontSize: 48,
     fontFamily: FONTS.poppins,
     color: COLORS.white,
-    marginBottom: 80,
+    marginBottom: 100,
     marginTop: 70,
   },
-
-  optionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-
-    width: "90%", // align closer to input width
-    marginTop: -25, // removes awkward vertical gap
+  forgotPasswordContainer: {
+    alignSelf: "flex-end",
+    marginRight: 25,
   },
-
-  rememberContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  checkbox: {
-    borderColor: "white",
-  },
-
-  rememberText: {
-    marginLeft: 8,
-    color: COLORS.white,
-    fontFamily: FONTS.poppins,
-    fontSize: 14,
-  },
-
   forgotPasswordText: {
     color: COLORS.white,
     fontFamily: FONTS.poppins,
     fontSize: 14,
+    marginTop: -20,
+  },
+  buttonContainer: {
+    marginTop: 25,
+  },
+  registerContainer: {
+    marginTop: -50,
   },
 
-  buttonContainer: {
-    marginTop: 225,
+  registerText: {
+    color: COLORS.white,
+    fontFamily: FONTS.poppins,
+    fontSize: 14,
+  },
+
+  registerLink: {
+    color: COLORS.white,
+    fontFamily: FONTS.poppins,
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
 });

@@ -34,25 +34,22 @@ export default function StartScreen() {
     }
   };
 
-  const tryAutoLogin = async () => {
+  const handlePress = async () => {
+    if (!hasAccount) {
+      router.push("/RegistrationScreen");
+      return;
+    }
+
     try {
-      const rememberMe = await SecureStore.getItemAsync("rememberMe");
-
-      if (rememberMe !== "true") {
-        router.push("/LoginScreen");
-        return;
-      }
-
+      // Check if user already has an active session
       await getCurrentUser();
 
+      // If session exists → go straight to home
       await navigateToHome();
     } catch {
+      // No session → go to login
       router.push("/LoginScreen");
     }
-  };
-
-  const handlePress = () => {
-    tryAutoLogin();
   };
 
   if (hasAccount === null) {

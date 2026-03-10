@@ -46,7 +46,7 @@ export default function RegistrationScreen() {
         role,
       });
 
-      router.push({
+      router.replace({
         pathname: "/VerifyScreen",
         params: { email },
       });
@@ -116,6 +116,18 @@ export default function RegistrationScreen() {
           testID="btn_register"
         />
       </View>
+
+      <View style={styles.loginContainer}>
+        <Text style={styles.loginText}>
+          Already have an account?{" "}
+          <Text
+            style={styles.loginLink}
+            onPress={() => router.replace("/LoginScreen")}
+          >
+            Login
+          </Text>
+        </Text>
+      </View>
     </KeyboardAwareScrollView>
   );
 }
@@ -133,10 +145,25 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontFamily: FONTS.poppins,
     color: COLORS.white,
-    marginBottom: 40,
     marginTop: 50,
   },
   buttonContainer: {
-    marginTop: 80,
+    marginTop: 10,
+  },
+  loginContainer: {
+    marginTop: -50,
+  },
+
+  loginText: {
+    color: COLORS.white,
+    fontFamily: FONTS.poppins,
+    fontSize: 14,
+  },
+
+  loginLink: {
+    color: COLORS.white,
+    fontFamily: FONTS.poppins,
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
 });
