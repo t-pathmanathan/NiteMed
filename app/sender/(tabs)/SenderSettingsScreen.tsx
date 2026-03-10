@@ -1,11 +1,13 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import { fetchUserAttributes, signOut } from "aws-amplify/auth";
+import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   RefreshControl,
   SectionList,
@@ -14,6 +16,7 @@ import {
   Text,
   View,
 } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 import Toast from "react-native-toast-message";
 
 import { deleteAccountApi } from "@/src/api/deleteAccountApi";
@@ -70,6 +73,7 @@ export default function SenderSettingsScreen() {
   >(null);
   const [linkCode, setLinkCode] = useState<string | null>(null);
   const [loadingLinkCode, setLoadingLinkCode] = useState(true);
+  const [qrVisible, setQrVisible] = useState(false);
 
   const [receivers, setReceivers] = useState<Receiver[]>([]);
   const [loadingReceivers, setLoadingReceivers] = useState(true);
@@ -349,7 +353,13 @@ export default function SenderSettingsScreen() {
           );
 
         case "linkCodeCard":
-          return <LinkCodeCard linkCode={linkCode} loading={loadingLinkCode} />;
+          return (
+            <LinkCodeCard
+              linkCode={linkCode}
+              loading={loadingLinkCode}
+              onGenerateQR={() => setQrVisible(true)}
+            />
+          );
 
         case "toggleNotifications":
           return (
@@ -407,6 +417,31 @@ export default function SenderSettingsScreen() {
         }
         contentContainerStyle={{ paddingBottom: 120 }}
       />
+
+      {/* QR CODE MODAL */}
+      <Modal
+        visible={qrVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setQrVisible(false)}
+      >
+        <View style={qrStyles.overlay}>
+          <View style={qrStyles.modalCard}>
+            <Text style={qrStyles.title}>Show QR Code To Caregiver</Text>
+
+            {linkCode && <QRCode value={`NM:${linkCode}`} size={220} />}
+
+            <Text style={qrStyles.code}>{linkCode}</Text>
+
+            <Pressable
+              style={qrStyles.closeBtn}
+              onPress={() => setQrVisible(false)}
+            >
+              <Text style={qrStyles.closeText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -431,10 +466,24 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, right, onPress }) => (
 const LinkCodeCard = ({
   linkCode,
   loading,
+  onGenerateQR,
 }: {
   linkCode: string | null;
   loading: boolean;
+  onGenerateQR: () => void;
 }) => {
+  const handleCopyCode = async () => {
+    if (!linkCode) return;
+
+    await Clipboard.setStringAsync(linkCode);
+
+    Toast.show({
+      type: "success",
+      text1: "Copied!",
+      text2: "Link code copied to clipboard",
+      position: "top",
+    });
+  };
   if (loading) {
     return (
       <View style={styles.senderCard}>
@@ -456,12 +505,12 @@ const LinkCodeCard = ({
       <Text style={styles.senderCardCode}>{linkCode}</Text>
 
       <View style={styles.senderCardButtons}>
-        <Pressable style={styles.senderBtn}>
+        <Pressable style={styles.senderBtn} onPress={onGenerateQR}>
           <AntDesign name="qrcode" size={20} color="#FD1101" />
           <Text style={styles.senderBtnText}>Generate QR Code</Text>
         </Pressable>
 
-        <Pressable style={styles.senderBtn}>
+        <Pressable style={styles.senderBtn} onPress={handleCopyCode}>
           <Feather name="copy" size={20} color="#FD1101" />
           <Text style={styles.senderBtnText}>Copy Code</Text>
         </Pressable>
@@ -599,5 +648,43 @@ const styles = StyleSheet.create({
   },
   badgeTaken: {
     backgroundColor: "#D6F5D6",
+  },
+});
+
+const qrStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCard: {
+    backgroundColor: "white",
+    padding: 24,
+    borderRadius: 16,
+    alignItems: "center",
+    width: "85%",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 20,
+  },
+  code: {
+    marginTop: 16,
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: 2,
+  },
+  closeBtn: {
+    marginTop: 20,
+    backgroundColor: "#FD1101",
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 8,
+  },
+  closeText: {
+    color: "white",
+    fontWeight: "600",
   },
 });

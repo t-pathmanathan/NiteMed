@@ -118,6 +118,15 @@ export default function RootLayout() {
         <Stack.Screen name="ForgotPasswordScreen" />
         <Stack.Screen name="ResetPasswordScreen" />
         <Stack.Screen name="VerifyScreen" />
+
+        {/* 👇 ADD THIS */}
+        <Stack.Screen
+          name="(modals)"
+          options={{
+            presentation: "modal",
+            headerShown: false,
+          }}
+        />
       </Stack>
 
       <Toast config={toastConfig} />

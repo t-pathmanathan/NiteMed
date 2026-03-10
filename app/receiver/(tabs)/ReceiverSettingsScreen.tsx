@@ -1,7 +1,8 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { fetchUserAttributes, signOut } from "aws-amplify/auth";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -103,6 +104,10 @@ export default function ReceiverSettingsScreen() {
     loadProfile();
   }, []);
 
+  const handleOpenScanner = () => {
+    router.push("/(modals)/ScanQRScreen");
+  };
+
   // -----------------------------------------
   // LOAD CONNECTIONS (Reusable)
   // -----------------------------------------
@@ -169,11 +174,30 @@ export default function ReceiverSettingsScreen() {
   );
 
   // -----------------------------------------
+  // HANDLE SCANNED QR CODE
+  // -----------------------------------------
+
+  const { scannedCode } = useLocalSearchParams();
+
+  useEffect(() => {
+    if (scannedCode) {
+      const code = scannedCode as string;
+
+      setEnteredCode(code);
+
+      // automatically link after scan
+      handleLinkSender(code);
+    }
+  }, [scannedCode]);
+
+  // -----------------------------------------
   // LINK HANDLER
   // -----------------------------------------
 
-  const handleLinkSender = async () => {
-    if (!enteredCode.trim()) {
+  const handleLinkSender = async (code?: string) => {
+    const finalCode = code ?? enteredCode;
+
+    if (!finalCode.trim()) {
       Toast.show({
         type: "error",
         text1: "Missing Code",
@@ -186,7 +210,9 @@ export default function ReceiverSettingsScreen() {
 
     try {
       setLinking(true);
-      await linkReceiverApi(enteredCode.trim().toUpperCase());
+
+      await linkReceiverApi(finalCode.trim().toUpperCase());
+
       setEnteredCode("");
 
       setLoadingSenders(true);
@@ -360,6 +386,7 @@ export default function ReceiverSettingsScreen() {
               onChangeCode={setEnteredCode}
               onSubmit={handleLinkSender}
               loading={linking}
+              onScanPress={handleOpenScanner}
             />
           );
         case "toggleNotifications":
@@ -439,11 +466,13 @@ const ReceiverLinkCodeCard = ({
   onChangeCode,
   onSubmit,
   loading,
+  onScanPress,
 }: {
   enteredCode: string;
   onChangeCode: (t: string) => void;
   onSubmit: () => void;
   loading: boolean;
+  onScanPress: () => void;
 }) => (
   <View style={styles.receiverCard}>
     <TextInput
@@ -456,7 +485,7 @@ const ReceiverLinkCodeCard = ({
       maxLength={9}
     />
     <View style={styles.receiverButtons}>
-      <Pressable style={styles.receiverScanBtn}>
+      <Pressable style={styles.receiverScanBtn} onPress={onScanPress}>
         <Feather name="camera" size={20} color="#FD1101" />
         <Text style={styles.receiverScanText}>Scan QR Code</Text>
       </Pressable>
@@ -469,7 +498,14 @@ const ReceiverLinkCodeCard = ({
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.receiverPrimaryText}>Submit / Link Sender</Text>
+          <View style={styles.linkContent}>
+            <MaterialIcons
+              name="connect-without-contact"
+              size={24}
+              color="white"
+            />
+            <Text style={styles.receiverPrimaryText}>Link</Text>
+          </View>
         )}
       </Pressable>
     </View>
@@ -567,6 +603,14 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  linkContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    gap: 6,
+    marginRight: 20,
   },
   receiverName: { fontSize: 16, fontWeight: "500" },
   loadingRow: { backgroundColor: "white", padding: 20, alignItems: "center" },
