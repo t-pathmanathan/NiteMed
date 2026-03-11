@@ -1,3 +1,4 @@
+import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import { confirmForgotPasswordApi } from "@/src/api/authApi";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -92,13 +93,11 @@ export default function ResetPasswordScreen() {
           style={styles.codeInput}
         />
 
-        <TextInput
+        <LabeledPasswordInput
+          label="New Password"
           value={newPassword}
           onChangeText={setNewPassword}
-          placeholder="New password"
-          placeholderTextColor="#999"
-          secureTextEntry
-          style={styles.input}
+          variant="light"
         />
 
         <TouchableOpacity
@@ -128,6 +127,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 24,
+    marginBottom: 100,
   },
   title: {
     fontSize: 26,

@@ -13,6 +13,7 @@ type PasswordInputProps = {
   showStrengthIndicator?: boolean;
   onStrengthChange?: (strength: StrengthLevel) => void;
   testID?: string;
+  variant?: "dark" | "light";
 };
 
 const getStrength = (password: string): StrengthLevel => {
@@ -40,6 +41,7 @@ export default function LabeledPasswordInput({
   showStrengthIndicator = false,
   onStrengthChange,
   testID,
+  variant = "dark",
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -50,15 +52,22 @@ export default function LabeledPasswordInput({
   return (
     <View style={styles.container}>
       <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, variant === "light" && styles.labelLight]}>
+          {label}
+        </Text>
         {showIndicator && (
           <PasswordStrengthIndicator strength={strength} visible={true} />
         )}
       </View>
 
-      <View style={styles.inputWrapper}>
+      <View
+        style={[
+          styles.inputWrapper,
+          variant === "light" && styles.inputWrapperLight,
+        ]}
+      >
         <TextInput
-          style={styles.input}
+          style={[styles.input, variant === "light" && styles.inputLight]}
           secureTextEntry={!visible}
           value={value}
           onChangeText={(text) => {
@@ -84,7 +93,7 @@ export default function LabeledPasswordInput({
           <Ionicons
             name={visible ? "eye-off" : "eye"}
             size={24}
-            color={COLORS.white}
+            color={variant === "light" ? "#000" : COLORS.white}
           />
         </Pressable>
       </View>
@@ -130,5 +139,18 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 10,
     padding: 5,
+  },
+  labelLight: {
+    color: "#000",
+  },
+
+  inputWrapperLight: {
+    backgroundColor: "#fff",
+    borderWidth: 1.5,
+    borderColor: "#000",
+  },
+
+  inputLight: {
+    color: "#000",
   },
 });
