@@ -34,7 +34,7 @@ export default {
       [
         "expo-splash-screen",
         {
-          backgroundImage: "./assets/images/splash.png",
+          image: "./assets/images/splash.png",
           resizeMode: "cover",
         },
       ],
