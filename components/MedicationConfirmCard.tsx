@@ -1,3 +1,16 @@
+/**
+ * MedicationConfirmCard
+ *
+ * Card component that prompts the user to confirm whether
+ * they have taken their medication.
+ *
+ * Handles two phases:
+ * - "prompt": asks the user to confirm medication intake
+ * - "confirmed": shows confirmation and allows cancellation
+ *
+ * Includes optimistic UI updates and entry animations.
+ */
+
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,16 +22,23 @@ import {
 } from "react-native";
 
 type Props = {
+  /** Called when the user confirms medication intake */
   onConfirm: () => Promise<void> | void;
+
+  /** Called when the user cancels a previous confirmation */
   onCancel: () => Promise<void> | void;
+
+  /** Initial confirmation state from backend */
   initialConfirmed: boolean;
 };
 
 type Phase = "prompt" | "confirmed";
 
+/** Message shown when prompting the user for confirmation */
 const PROMPT_MESSAGE =
   "Hi there!\n\nIt's time to check in.\n\nHave you taken your medication?\n\nPlease confirm.";
 
+/** Message shown after the user confirms medication intake */
 const THANK_YOU_MESSAGE =
   "Thank you for confirming.\n\nYour caregiver has been notified.\n\nIf this was a mistake, you may cancel below.";
 
@@ -27,17 +47,23 @@ export default function MedicationConfirmCard({
   onCancel,
   initialConfirmed,
 }: Props) {
+  /** Current UI phase of the component */
   const [phase, setPhase] = useState<Phase>(
     initialConfirmed ? "confirmed" : "prompt",
   );
 
+  /** Loading state during confirm/cancel actions */
   const [loading, setLoading] = useState(false);
 
-  // Stronger animation values
+  /** Animated values for entry transition */
   const translateY = useRef(new Animated.Value(40)).current;
   const scale = useRef(new Animated.Value(0.96)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
+  /**
+   * Runs the entry animation for the card.
+   * Triggered when the phase changes.
+   */
   const animateIn = () => {
     translateY.setValue(40);
     scale.setValue(0.96);
@@ -46,7 +72,7 @@ export default function MedicationConfirmCard({
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: 0,
-        duration: 450, // slightly slower
+        duration: 450,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -64,24 +90,32 @@ export default function MedicationConfirmCard({
     ]).start();
   };
 
-  // Animate when phase changes
+  /** Animate whenever the UI phase changes */
   useEffect(() => {
     animateIn();
   }, [phase]);
 
-  // Sync with backend state
+  /**
+   * Sync UI phase with backend confirmation state.
+   * This ensures the card reflects server updates.
+   */
   useEffect(() => {
     setPhase(initialConfirmed ? "confirmed" : "prompt");
   }, [initialConfirmed]);
 
+  /** Returns the message corresponding to the current phase */
   const getMessage = () => {
     return phase === "confirmed" ? THANK_YOU_MESSAGE : PROMPT_MESSAGE;
   };
 
+  /**
+   * Handles medication confirmation.
+   * Uses an optimistic update for immediate UI feedback.
+   */
   const handleConfirm = async () => {
     if (phase !== "prompt") return;
 
-    setPhase("confirmed"); // optimistic
+    setPhase("confirmed");
     setLoading(true);
 
     try {
@@ -93,10 +127,14 @@ export default function MedicationConfirmCard({
     }
   };
 
+  /**
+   * Handles cancellation of a previous confirmation.
+   * Reverts the UI if the request fails.
+   */
   const handleCancel = async () => {
     if (phase !== "confirmed") return;
 
-    setPhase("prompt"); // immediate switch back
+    setPhase("prompt");
     setLoading(true);
 
     try {
@@ -166,6 +204,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
+
   messageText: {
     fontSize: 18,
     fontWeight: "600",
@@ -173,6 +212,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#111",
   },
+
   confirmButton: {
     alignSelf: "center",
     backgroundColor: "#FD1101",
@@ -181,6 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginTop: 24,
   },
+
   confirmText: {
     color: "white",
     fontWeight: "700",

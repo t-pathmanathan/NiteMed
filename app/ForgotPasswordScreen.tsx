@@ -1,5 +1,15 @@
-import { forgotPasswordApi } from "@/src/api/authApi";
-import { useRouter } from "expo-router";
+/**
+ * ForgotPasswordScreen
+ *
+ * Allows a user to initiate the password reset process.
+ *
+ * Responsibilities:
+ * - Collect the user's email address
+ * - Request a password reset code from the authentication API
+ * - Notify the user that a reset code has been sent
+ * - Navigate to the password reset screen
+ */
+
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -10,13 +20,33 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
+
+import { forgotPasswordApi } from "@/src/api/authApi";
+
+/**
+ * Primary theme color used for action buttons
+ */
+const PRIMARY_RED = "#FD1101";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+
+  /**
+   * Form state
+   */
   const [email, setEmail] = useState("");
+
+  /**
+   * Loading state during API request
+   */
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Handles the request to send a password reset code
+   */
   const handleSendCode = async () => {
     if (!email) {
       Toast.show({
@@ -29,7 +59,11 @@ export default function ForgotPasswordScreen() {
     }
 
     setLoading(true);
+
     try {
+      /**
+       * Request password reset code from authentication API
+       */
       await forgotPasswordApi({ email });
 
       Toast.show({
@@ -39,15 +73,21 @@ export default function ForgotPasswordScreen() {
         position: "top",
       });
 
+      /**
+       * Navigate to reset password screen
+       */
       router.push({
         pathname: "/ResetPasswordScreen",
         params: { email },
       });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to send reset code.";
+
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: err?.message || "Failed to send reset code.",
+        text2: message,
         position: "top",
       });
     } finally {
@@ -91,8 +131,6 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const PRIMARY_RED = "#FD1101";
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -100,11 +138,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
+
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 24,
   },
+
   title: {
     fontSize: 26,
     fontWeight: "700",
@@ -112,12 +152,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 8,
   },
+
   subtitle: {
     fontSize: 14,
     color: "#555",
     textAlign: "center",
     marginBottom: 28,
   },
+
   input: {
     borderWidth: 1.5,
     borderColor: "#000",
@@ -128,6 +170,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: "#000",
   },
+
   primaryButton: {
     backgroundColor: PRIMARY_RED,
     paddingVertical: 14,
@@ -135,6 +178,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+
   primaryButtonText: {
     color: "#fff",
     fontSize: 16,

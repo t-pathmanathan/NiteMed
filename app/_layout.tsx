@@ -1,16 +1,44 @@
-import { Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
-import { Amplify } from "aws-amplify";
-import * as Notifications from "expo-notifications";
-import { Stack } from "expo-router";
+/**
+ * RootLayout
+ *
+ * This is the root layout for the Expo Router application.
+ * It is responsible for:
+ * - Configuring AWS Amplify
+ * - Registering global notification behavior
+ * - Initializing Android notification channels
+ * - Loading global fonts
+ * - Registering top-level navigation routes
+ * - Rendering the global Toast notification system
+ */
+
 import { useEffect } from "react";
 import { Platform, Text } from "react-native";
-import Toast, { ErrorToast, SuccessToast } from "react-native-toast-message";
+
+import * as Notifications from "expo-notifications";
+import { Stack } from "expo-router";
+
+import { Amplify } from "aws-amplify";
+
+import { Poppins_700Bold, useFonts } from "@expo-google-fonts/poppins";
+
+import Toast, {
+  ErrorToast,
+  SuccessToast,
+  ToastConfig,
+} from "react-native-toast-message";
 
 import outputs from "../amplify_outputs.json";
 
+/**
+ * Configure AWS Amplify using generated project outputs.
+ * This should run once when the app initializes.
+ */
 Amplify.configure(outputs);
 
-// 👇 Foreground notification behavior
+/**
+ * Global foreground notification behavior.
+ * Determines how notifications behave while the app is open.
+ */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
@@ -20,8 +48,12 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const toastConfig = {
-  error: (props: any) => (
+/**
+ * Global Toast configuration.
+ * Customizes appearance of success and error toasts across the app.
+ */
+const toastConfig: ToastConfig = {
+  error: (props) => (
     <ErrorToast
       {...props}
       style={{
@@ -45,7 +77,7 @@ const toastConfig = {
     />
   ),
 
-  success: (props: any) => (
+  success: (props) => (
     <SuccessToast
       {...props}
       style={{
@@ -71,14 +103,23 @@ const toastConfig = {
 };
 
 export default function RootLayout() {
+  /**
+   * Load global fonts before rendering the app.
+   */
   const [fontsLoaded] = useFonts({
     Poppins_700Bold,
   });
 
-  // 👇 Create Android notification channel ON APP START
+  /**
+   * Initialize Android notification channels when the app starts.
+   * Required for controlling notification behavior on Android.
+   */
   useEffect(() => {
     if (Platform.OS === "android") {
-      // 🔹 Default channel (Confirm notifications)
+      /**
+       * Default notification channel
+       * Used for general notifications such as confirmations.
+       */
       Notifications.setNotificationChannelAsync("default", {
         name: "Default Notifications",
         importance: Notifications.AndroidImportance.DEFAULT,
@@ -90,7 +131,10 @@ export default function RootLayout() {
           Notifications.AndroidNotificationVisibility.PUBLIC,
       });
 
-      // 🚨 Alarm channel (Nudge notifications)
+      /**
+       * Alarm notification channel
+       * Used for medication reminder alarms requiring high priority.
+       */
       Notifications.setNotificationChannelAsync("alarm-channel", {
         name: "Medication Alarm",
         importance: Notifications.AndroidImportance.MAX,
@@ -105,6 +149,9 @@ export default function RootLayout() {
     }
   }, []);
 
+  /**
+   * Prevent rendering the app until fonts are loaded.
+   */
   if (!fontsLoaded) {
     return <Text>Loading...</Text>;
   }
@@ -119,7 +166,7 @@ export default function RootLayout() {
         <Stack.Screen name="ResetPasswordScreen" />
         <Stack.Screen name="VerifyScreen" />
 
-        {/* 👇 ADD THIS */}
+        {/* Modal route group */}
         <Stack.Screen
           name="(modals)"
           options={{
@@ -129,6 +176,7 @@ export default function RootLayout() {
         />
       </Stack>
 
+      {/* Global toast notification renderer */}
       <Toast config={toastConfig} />
     </>
   );

@@ -1,11 +1,22 @@
+/**
+ * linkApi
+ *
+ * Handles linking a receiver account using a caregiver-provided link code.
+ */
+
 import { fetchAuthSession } from "@aws-amplify/auth";
 
 const API_BASE_URL = "https://aagvjd6mke.execute-api.us-east-1.amazonaws.com";
 
+/**
+ * Links the current authenticated user to a receiver account
+ * using a provided link code.
+ */
 export const linkReceiverApi = async (linkCode: string) => {
   const session = await fetchAuthSession();
   const token = session.tokens?.idToken?.toString();
 
+  // Ensure the user is authenticated before making the request
   if (!token) {
     throw new Error("No auth token found");
   }
@@ -19,6 +30,7 @@ export const linkReceiverApi = async (linkCode: string) => {
     body: JSON.stringify({ linkCode }),
   });
 
+  // Handle API errors
   if (!response.ok) {
     const text = await response.text();
     throw new Error(text || "Linking failed");

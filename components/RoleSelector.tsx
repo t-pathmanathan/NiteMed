@@ -1,10 +1,22 @@
+/**
+ * RoleSelector
+ *
+ * Allows the user to choose their role during onboarding
+ * or registration.
+ */
+
 import { Checkbox } from "expo-checkbox";
 import { StyleSheet, Text, View } from "react-native";
 import { FONTS } from "../theme";
 
 type RoleSelectorProps = {
+  /** Currently selected role */
   role: string | null;
+
+  /** Updates the selected role */
   setRole: (role: string) => void;
+
+  /** Optional identifier used for testing */
   testID?: string;
 };
 
@@ -47,15 +59,18 @@ const styles = StyleSheet.create({
     color: "white",
     marginBottom: 1,
   },
+
   checkboxSection: {
     flexDirection: "row",
     alignSelf: "flex-start",
     marginLeft: 25,
     marginBottom: 5,
   },
+
   checkbox: {
     borderColor: "white",
   },
+
   checkboxLabel: {
     marginLeft: 8,
     color: "white",

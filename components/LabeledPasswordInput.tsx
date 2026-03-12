@@ -1,3 +1,13 @@
+/**
+ * LabeledPasswordInput
+ *
+ * Reusable password input component with:
+ * - show/hide password toggle
+ * - optional password strength indicator
+ *
+ * Used across authentication screens for consistent password handling.
+ */
+
 import PasswordStrengthIndicator, {
   StrengthLevel,
 } from "@/components/PasswordStrengthIndicator";
@@ -7,15 +17,32 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 type PasswordInputProps = {
+  /** Label displayed above the input */
   label: string;
+
+  /** Current password value */
   value: string;
+
+  /** Callback triggered when the password changes */
   onChangeText: (text: string) => void;
+
+  /** Whether the strength indicator should be displayed */
   showStrengthIndicator?: boolean;
+
+  /** Optional callback when password strength changes */
   onStrengthChange?: (strength: StrengthLevel) => void;
+
+  /** Optional identifier used for testing */
   testID?: string;
+
+  /** Visual variant for different backgrounds */
   variant?: "dark" | "light";
 };
 
+/**
+ * Determines the strength level of a password based on
+ * length and character diversity.
+ */
 const getStrength = (password: string): StrengthLevel => {
   const hasLower = /[a-z]/.test(password);
   const hasUpper = /[A-Z]/.test(password);
@@ -24,6 +51,7 @@ const getStrength = (password: string): StrengthLevel => {
 
   if (password.length >= 8 && hasLower && hasUpper && hasNumber && hasSpecial)
     return "Strong";
+
   if (
     password.length >= 6 &&
     ((hasLower && hasUpper) ||
@@ -31,6 +59,7 @@ const getStrength = (password: string): StrengthLevel => {
       (hasNumber && hasSpecial))
   )
     return "Medium";
+
   return "Weak";
 };
 
@@ -43,10 +72,15 @@ export default function LabeledPasswordInput({
   testID,
   variant = "dark",
 }: PasswordInputProps) {
+  /** Controls whether the password is visible */
   const [visible, setVisible] = useState(false);
+
+  /** Tracks focus state to determine when to show the strength indicator */
   const [focused, setFocused] = useState(false);
 
   const strength: StrengthLevel = getStrength(value);
+
+  /** Show indicator when enabled and the field is focused or has input */
   const showIndicator = showStrengthIndicator && (focused || value.length > 0);
 
   return (
@@ -55,6 +89,7 @@ export default function LabeledPasswordInput({
         <Text style={[styles.label, variant === "light" && styles.labelLight]}>
           {label}
         </Text>
+
         {showIndicator && (
           <PasswordStrengthIndicator strength={strength} visible={true} />
         )}
@@ -72,6 +107,8 @@ export default function LabeledPasswordInput({
           value={value}
           onChangeText={(text) => {
             onChangeText(text);
+
+            // Notify parent component when strength changes
             if (showStrengthIndicator && onStrengthChange) {
               const newStrength = getStrength(text);
               onStrengthChange(newStrength);
@@ -107,17 +144,20 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     alignSelf: "center",
   },
+
   labelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 5,
   },
+
   label: {
     color: COLORS.white,
     fontSize: 16,
     fontFamily: FONTS.poppins,
   },
+
   inputWrapper: {
     width: "100%",
     height: 50,
@@ -125,6 +165,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
   },
+
   input: {
     width: "100%",
     height: "100%",
@@ -135,11 +176,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: FONTS.poppins,
   },
+
   eyeIcon: {
     position: "absolute",
     right: 10,
     padding: 5,
   },
+
   labelLight: {
     color: "#000",
   },

@@ -1,3 +1,16 @@
+/**
+ * SenderSettingsScreen
+ *
+ * Settings interface for Sender users in NiteMed.
+ *
+ * Features:
+ * - View account information
+ * - Display link code for receiver connection
+ * - Manage registered receivers
+ * - Toggle notification preferences
+ * - Handle sign-out and account deletion
+ */
+
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import { fetchUserAttributes, signOut } from "aws-amplify/auth";
@@ -25,6 +38,8 @@ import { getMyReceivers } from "@/src/api/retrieveReceiversApi";
 import { toggleNotification } from "@/src/api/toggleNotificationApi";
 import { unlinkReceiverApi } from "@/src/api/unlinkReceiverApi";
 import { bootstrapUserApi } from "@/src/api/userApi";
+
+const QR_PREFIX = "NM:";
 
 // -----------------------------------------
 // TYPES
@@ -71,6 +86,7 @@ export default function SenderSettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState<
     boolean | null
   >(null);
+
   const [linkCode, setLinkCode] = useState<string | null>(null);
   const [loadingLinkCode, setLoadingLinkCode] = useState(true);
   const [qrVisible, setQrVisible] = useState(false);
@@ -83,10 +99,15 @@ export default function SenderSettingsScreen() {
   // LOAD PROFILE
   // -----------------------------------------
 
+  /**
+   * Loads the sender's basic account information
+   * from AWS Cognito user attributes.
+   */
   useEffect(() => {
     const loadProfile = async () => {
       try {
         const attrs = await fetchUserAttributes();
+
         setUserProfile({
           fullName: attrs.name ?? "Unknown",
           email: attrs.email ?? "Unknown",
@@ -110,6 +131,10 @@ export default function SenderSettingsScreen() {
   // LOAD LINK CODE
   // -----------------------------------------
 
+  /**
+   * Loads the sender's unique link code used
+   * to connect receivers.
+   */
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -134,18 +159,22 @@ export default function SenderSettingsScreen() {
   // LOAD CONNECTIONS (Reusable)
   // -----------------------------------------
 
+  /**
+   * Loads all receivers connected to the sender.
+   * This is used both on initial load and refresh.
+   */
   const loadConnections = async () => {
     try {
       const res = await getMyReceivers();
 
-      setReceivers(
-        res.connections.map((c: any) => ({
-          userId: c.userId,
-          name: c.fullName,
-          createdAt: c.createdAt,
-          status: "active",
-        })),
-      );
+      const mappedReceivers: Receiver[] = res.connections.map((c: any) => ({
+        userId: c.userId,
+        name: c.fullName,
+        createdAt: c.createdAt,
+        status: "active",
+      }));
+
+      setReceivers(mappedReceivers);
     } catch {
       Toast.show({
         type: "error",
@@ -168,6 +197,9 @@ export default function SenderSettingsScreen() {
   // LOAD NOTIFICATION PREFERENCE
   // -----------------------------------------
 
+  /**
+   * Retrieves the sender's notification preference.
+   */
   const loadNotificationPreference = async () => {
     try {
       const res = await getNotificationPreference();
@@ -188,6 +220,9 @@ export default function SenderSettingsScreen() {
     loadNotificationPreference();
   }, []);
 
+  /**
+   * Refresh data when the screen becomes focused.
+   */
   useFocusEffect(
     useCallback(() => {
       loadConnections();
@@ -199,10 +234,13 @@ export default function SenderSettingsScreen() {
   // HANDLERS
   // -----------------------------------------
 
+  /**
+   * Unlinks a receiver from the sender account.
+   */
   const handleUnlinkReceiver = async (receiverId: string) => {
     try {
       await unlinkReceiverApi(receiverId);
-      await loadConnections(); // refresh cleanly
+      await loadConnections();
     } catch {
       Toast.show({
         type: "error",
@@ -213,13 +251,16 @@ export default function SenderSettingsScreen() {
     }
   };
 
+  /**
+   * Toggles sender notification preferences.
+   * Uses optimistic UI update for responsiveness.
+   */
   const handleToggleNotifications = async (value: boolean) => {
-    // Optimistically update UI first
     setNotificationsEnabled(value);
 
     try {
       await toggleNotification(value);
-    } catch (error) {
+    } catch {
       Toast.show({
         type: "error",
         text1: "Notification Error",
@@ -231,6 +272,9 @@ export default function SenderSettingsScreen() {
     }
   };
 
+  /**
+   * Signs the user out of the application.
+   */
   const handleSignOut = async () => {
     try {
       await signOut({ global: true });
@@ -245,6 +289,9 @@ export default function SenderSettingsScreen() {
     }
   };
 
+  /**
+   * Permanently deletes the sender's account.
+   */
   const confirmDeleteAccount = async () => {
     try {
       await deleteAccountApi();
@@ -260,6 +307,9 @@ export default function SenderSettingsScreen() {
     }
   };
 
+  /**
+   * Prompts the user before deleting their account.
+   */
   const handleDeleteAccount = () => {
     Alert.alert(
       "Delete Account",
@@ -392,7 +442,7 @@ export default function SenderSettingsScreen() {
   };
 
   // -----------------------------------------
-  // RENDER SCREEN
+  // SCREEN RENDER
   // -----------------------------------------
 
   return (
@@ -422,7 +472,7 @@ export default function SenderSettingsScreen() {
       <Modal
         visible={qrVisible}
         animationType="slide"
-        transparent={true}
+        transparent
         onRequestClose={() => setQrVisible(false)}
       >
         <View style={qrStyles.overlay}>
@@ -446,9 +496,11 @@ export default function SenderSettingsScreen() {
   );
 }
 
-// -----------------------------------------
+//
+// ============================================================
 // REUSABLE COMPONENTS
-// -----------------------------------------
+// ============================================================
+//
 
 type SettingRowProps = {
   label: string;
@@ -456,6 +508,9 @@ type SettingRowProps = {
   onPress?: () => void;
 };
 
+/**
+ * Generic row component used throughout the settings screen.
+ */
 const SettingRow: React.FC<SettingRowProps> = ({ label, right, onPress }) => (
   <Pressable onPress={onPress} style={styles.row}>
     <Text style={styles.rowLabel}>{label}</Text>
@@ -463,14 +518,20 @@ const SettingRow: React.FC<SettingRowProps> = ({ label, right, onPress }) => (
   </Pressable>
 );
 
-const LinkCodeCard = ({
-  linkCode,
-  loading,
-  onGenerateQR,
-}: {
+type LinkCodeCardProps = {
   linkCode: string | null;
   loading: boolean;
   onGenerateQR: () => void;
+};
+
+/**
+ * Card displaying the sender link code with options to
+ * generate a QR code or copy the code to clipboard.
+ */
+const LinkCodeCard: React.FC<LinkCodeCardProps> = ({
+  linkCode,
+  loading,
+  onGenerateQR,
 }) => {
   const handleCopyCode = async () => {
     if (!linkCode) return;
@@ -484,6 +545,7 @@ const LinkCodeCard = ({
       position: "top",
     });
   };
+
   if (loading) {
     return (
       <View style={styles.senderCard}>
@@ -519,13 +581,15 @@ const LinkCodeCard = ({
   );
 };
 
-const ReceiverRow = ({
-  receiver,
-  onUnlink,
-}: {
+type ReceiverRowProps = {
   receiver: Receiver;
   onUnlink: (id: string) => void;
-}) => (
+};
+
+/**
+ * Row displaying a connected receiver with unlink option.
+ */
+const ReceiverRow: React.FC<ReceiverRowProps> = ({ receiver, onUnlink }) => (
   <View style={styles.receiverRow}>
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <Text style={styles.receiverName}>{receiver.name}</Text>
@@ -541,11 +605,87 @@ const ReceiverRow = ({
   </View>
 );
 
-// -----------------------------------------
-// STYLES (UNCHANGED)
-// -----------------------------------------
+//
+// ============================================================
+// STYLES
+// ============================================================
+//
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FD1101",
+    paddingTop: 12,
+  },
+
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFF",
+    paddingHorizontal: 16,
+    marginTop: 18,
+    marginBottom: 6,
+  },
+
+  row: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: "white",
+    borderBottomColor: "#E5E5E5",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  rowLabel: {
+    fontSize: 16,
+    color: "#111",
+  },
+
+  receiverRow: {
+    backgroundColor: "white",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomColor: "#E5E5E5",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  receiverName: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+
+  loadingRow: {
+    backgroundColor: "white",
+    padding: 20,
+    alignItems: "center",
+  },
+
+  emptyRow: {
+    backgroundColor: "white",
+    padding: 20,
+    alignItems: "center",
+  },
+
+  emptyText: {
+    color: "#999",
+    fontSize: 14,
+  },
+
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+
+  badgeTaken: {
+    backgroundColor: "#D6F5D6",
+  },
+
   senderCard: {
     backgroundColor: "white",
     marginHorizontal: 16,
@@ -557,6 +697,7 @@ const styles = StyleSheet.create({
     borderColor: "#E5E5E5",
     alignItems: "center",
   },
+
   senderCardCode: {
     fontSize: 28,
     fontWeight: "bold",
@@ -564,11 +705,13 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     color: "#111",
   },
+
   senderCardButtons: {
     width: "100%",
     gap: 12,
     alignItems: "center",
   },
+
   senderBtn: {
     width: "90%",
     paddingVertical: 12,
@@ -581,73 +724,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+
   senderBtnText: {
     fontSize: 15,
     color: "#FD1101",
     fontWeight: "600",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#FD1101",
-    paddingTop: 12,
-  },
-  sectionHeader: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFF",
-    paddingHorizontal: 16,
-    marginTop: 18,
-    marginBottom: 6,
-  },
-  row: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: "white",
-    borderBottomColor: "#E5E5E5",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  rowLabel: {
-    fontSize: 16,
-    color: "#111",
-  },
-  receiverRow: {
-    backgroundColor: "white",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomColor: "#E5E5E5",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  receiverName: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  loadingRow: {
-    backgroundColor: "white",
-    padding: 20,
-    alignItems: "center",
-  },
-  emptyRow: {
-    backgroundColor: "white",
-    padding: 20,
-    alignItems: "center",
-  },
-  emptyText: {
-    color: "#999",
-    fontSize: 14,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  badgeTaken: {
-    backgroundColor: "#D6F5D6",
   },
 });
 
@@ -658,6 +739,7 @@ const qrStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   modalCard: {
     backgroundColor: "white",
     padding: 24,
@@ -665,17 +747,20 @@ const qrStyles = StyleSheet.create({
     alignItems: "center",
     width: "85%",
   },
+
   title: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 20,
   },
+
   code: {
     marginTop: 16,
     fontSize: 18,
     fontWeight: "600",
     letterSpacing: 2,
   },
+
   closeBtn: {
     marginTop: 20,
     backgroundColor: "#FD1101",
@@ -683,6 +768,7 @@ const qrStyles = StyleSheet.create({
     paddingHorizontal: 22,
     borderRadius: 8,
   },
+
   closeText: {
     color: "white",
     fontWeight: "600",

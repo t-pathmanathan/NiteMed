@@ -1,6 +1,15 @@
-import LabeledPasswordInput from "@/components/LabeledPasswordInput";
-import { confirmForgotPasswordApi } from "@/src/api/authApi";
-import { useLocalSearchParams, useRouter } from "expo-router";
+/**
+ * ResetPasswordScreen
+ *
+ * Allows a user to complete the password reset process.
+ *
+ * Responsibilities:
+ * - Accept the verification code sent to the user's email
+ * - Allow the user to choose a new password
+ * - Submit the reset request to the authentication API
+ * - Redirect the user back to the login screen
+ */
+
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -11,16 +20,40 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
+
+import LabeledPasswordInput from "@/components/LabeledPasswordInput";
+import { confirmForgotPasswordApi } from "@/src/api/authApi";
+
+/**
+ * Primary theme color for action buttons
+ */
+const PRIMARY_RED = "#FD1101";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+
+  /**
+   * Retrieve email passed from ForgotPasswordScreen
+   */
   const { email } = useLocalSearchParams<{ email: string }>();
 
+  /**
+   * Form state
+   */
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  /**
+   * Loading state during API request
+   */
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Handles password reset submission
+   */
   const handleResetPassword = async () => {
     if (!code || code.length !== 6) {
       Toast.show({
@@ -45,6 +78,9 @@ export default function ResetPasswordScreen() {
     setLoading(true);
 
     try {
+      /**
+       * Call authentication API to confirm password reset
+       */
       await confirmForgotPasswordApi({
         email,
         code,
@@ -58,12 +94,18 @@ export default function ResetPasswordScreen() {
         position: "top",
       });
 
+      /**
+       * Redirect user to login screen
+       */
       router.replace("/LoginScreen");
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Please try again.";
+
       Toast.show({
         type: "error",
         text1: "Reset Failed",
-        text2: err.message || "Please try again.",
+        text2: message,
         position: "top",
       });
     } finally {
@@ -114,8 +156,6 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const PRIMARY_RED = "#FD1101";
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -123,12 +163,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
+
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 24,
     marginBottom: 100,
   },
+
   title: {
     fontSize: 26,
     fontWeight: "700",
@@ -136,22 +178,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 8,
   },
+
   subtitle: {
     fontSize: 14,
     color: "#555",
     textAlign: "center",
     marginBottom: 28,
   },
-  input: {
-    borderWidth: 1.5,
-    borderColor: "#000",
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    marginBottom: 20,
-    color: "#000",
-  },
+
   codeInput: {
     borderWidth: 1.5,
     borderColor: "#000",
@@ -163,6 +197,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: "#000",
   },
+
   primaryButton: {
     backgroundColor: PRIMARY_RED,
     paddingVertical: 14,
@@ -170,6 +205,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+
   primaryButtonText: {
     color: "#fff",
     fontSize: 16,

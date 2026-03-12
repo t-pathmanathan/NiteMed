@@ -1,3 +1,10 @@
+/**
+ * authApi
+ *
+ * Wrapper functions for AWS Amplify authentication flows used throughout
+ * the application, including sign up, sign in, password reset, and sign out.
+ */
+
 import {
   confirmResetPassword,
   confirmSignUp,
@@ -15,6 +22,7 @@ export type SignUpInput = {
   role: string;
 };
 
+/** Registers a new user with Cognito */
 export const signUpApi = async ({
   email,
   password,
@@ -24,7 +32,13 @@ export const signUpApi = async ({
   return signUp({
     username: email,
     password,
-    options: { userAttributes: { email, name: fullName, "custom:role": role } },
+    options: {
+      userAttributes: {
+        email,
+        name: fullName,
+        "custom:role": role,
+      },
+    },
   });
 };
 
@@ -33,6 +47,7 @@ export type ConfirmSignUpInput = {
   code: string;
 };
 
+/** Confirms a user's sign-up using the verification code */
 export const confirmSignUpApi = async ({ email, code }: ConfirmSignUpInput) => {
   return confirmSignUp({
     username: email,
@@ -44,6 +59,7 @@ export type ResendSignUpCodeInput = {
   email: string;
 };
 
+/** Resends the Cognito sign-up verification code */
 export const resendCodeApi = async ({ email }: ResendSignUpCodeInput) => {
   return resendSignUpCode({ username: email });
 };
@@ -53,6 +69,7 @@ export type SignInInput = {
   password: string;
 };
 
+/** Signs an existing user into the application */
 export const signInApi = async ({ email, password }: SignInInput) => {
   return signIn({
     username: email,
@@ -64,6 +81,7 @@ export type ForgotPasswordInput = {
   email: string;
 };
 
+/** Starts the forgot password flow for a user */
 export const forgotPasswordApi = async ({ email }: ForgotPasswordInput) => {
   return resetPassword({ username: email });
 };
@@ -74,6 +92,7 @@ export type ConfirmForgotPasswordInput = {
   newPassword: string;
 };
 
+/** Confirms a password reset using the verification code */
 export const confirmForgotPasswordApi = async ({
   email,
   code,
@@ -86,6 +105,7 @@ export const confirmForgotPasswordApi = async ({
   });
 };
 
+/** Signs the current user out of the application */
 export const signOutApi = async () => {
   return signOut();
 };

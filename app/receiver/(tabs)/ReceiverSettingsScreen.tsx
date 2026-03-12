@@ -1,3 +1,18 @@
+/**
+ * ReceiverSettingsScreen
+ *
+ * Allows a receiver to manage their account and sender connections.
+ *
+ * Responsibilities:
+ * - Display account information (name and email)
+ * - Link senders using a link code or QR scanner
+ * - Display and manage registered senders
+ * - Allow receivers to unlink senders
+ * - Toggle notification preferences
+ * - Sign out of the account
+ * - Permanently delete the account
+ */
+
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -109,7 +124,7 @@ export default function ReceiverSettingsScreen() {
   };
 
   // -----------------------------------------
-  // LOAD CONNECTIONS (Reusable)
+  // LOAD CONNECTIONS
   // -----------------------------------------
 
   const loadConnections = async () => {
@@ -137,7 +152,6 @@ export default function ReceiverSettingsScreen() {
     }
   };
 
-  // Initial load
   useEffect(() => {
     loadConnections();
   }, []);
@@ -184,8 +198,6 @@ export default function ReceiverSettingsScreen() {
       const code = scannedCode as string;
 
       setEnteredCode(code);
-
-      // automatically link after scan
       handleLinkSender(code);
     }
   }, [scannedCode]);
@@ -232,7 +244,7 @@ export default function ReceiverSettingsScreen() {
   const handleUnlinkSender = async (senderId: string) => {
     try {
       await unlinkSenderApi(senderId);
-      await loadConnections(); // refresh instead of manual filtering
+      await loadConnections();
     } catch {
       Toast.show({
         type: "error",
@@ -244,12 +256,11 @@ export default function ReceiverSettingsScreen() {
   };
 
   const handleToggleNotifications = async (value: boolean) => {
-    // Optimistically update UI first
     setNotificationsEnabled(value);
 
     try {
       await toggleNotification(value);
-    } catch (error) {
+    } catch {
       Toast.show({
         type: "error",
         text1: "Notification Error",
@@ -369,8 +380,10 @@ export default function ReceiverSettingsScreen() {
       switch (item.type) {
         case "fullName":
           return <SettingRow label={userProfile?.fullName ?? ""} />;
+
         case "email":
           return <SettingRow label={userProfile?.email ?? ""} />;
+
         case "deleteAccount":
           return (
             <SettingRow
@@ -379,6 +392,7 @@ export default function ReceiverSettingsScreen() {
               right={<AntDesign name="delete" size={20} color="#FD1101" />}
             />
           );
+
         case "receiverLinkCode":
           return (
             <ReceiverLinkCodeCard
@@ -389,6 +403,7 @@ export default function ReceiverSettingsScreen() {
               onScanPress={handleOpenScanner}
             />
           );
+
         case "toggleNotifications":
           return (
             <SettingRow
@@ -404,6 +419,7 @@ export default function ReceiverSettingsScreen() {
               }
             />
           );
+
         case "signOut":
           return (
             <SettingRow
@@ -445,7 +461,7 @@ export default function ReceiverSettingsScreen() {
 }
 
 // -----------------------------------------
-// REUSABLE COMPONENTS (UNCHANGED)
+// REUSABLE COMPONENTS
 // -----------------------------------------
 
 type SettingRowProps = {
@@ -484,6 +500,7 @@ const ReceiverLinkCodeCard = ({
       autoCapitalize="characters"
       maxLength={9}
     />
+
     <View style={styles.receiverButtons}>
       <Pressable style={styles.receiverScanBtn} onPress={onScanPress}>
         <Feather name="camera" size={20} color="#FD1101" />
@@ -534,7 +551,7 @@ const SenderRow = ({
 );
 
 // -----------------------------------------
-// STYLES (UNCHANGED)
+// STYLES
 // -----------------------------------------
 
 const styles = StyleSheet.create({
