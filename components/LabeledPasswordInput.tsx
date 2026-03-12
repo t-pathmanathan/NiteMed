@@ -4,6 +4,7 @@
  * Reusable password input component with:
  * - show/hide password toggle
  * - optional password strength indicator
+ * - optional info icon for password requirements
  *
  * Used across authentication screens for consistent password handling.
  */
@@ -14,7 +15,14 @@ import PasswordStrengthIndicator, {
 import { COLORS, FONTS } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 type PasswordInputProps = {
   /** Label displayed above the input */
@@ -37,6 +45,12 @@ type PasswordInputProps = {
 
   /** Visual variant for different backgrounds */
   variant?: "dark" | "light";
+
+  /** Whether to show the info icon beside the label */
+  showInfoIcon?: boolean;
+
+  /** Message displayed when the info icon is pressed */
+  infoMessage?: string;
 };
 
 /**
@@ -49,16 +63,18 @@ const getStrength = (password: string): StrengthLevel => {
   const hasNumber = /\d/.test(password);
   const hasSpecial = /[^A-Za-z0-9]/.test(password);
 
-  if (password.length >= 8 && hasLower && hasUpper && hasNumber && hasSpecial)
+  if (password.length >= 8 && hasLower && hasUpper && hasNumber && hasSpecial) {
     return "Strong";
+  }
 
   if (
     password.length >= 6 &&
     ((hasLower && hasUpper) ||
       (hasLower && hasNumber) ||
       (hasNumber && hasSpecial))
-  )
+  ) {
     return "Medium";
+  }
 
   return "Weak";
 };
@@ -71,6 +87,8 @@ export default function LabeledPasswordInput({
   onStrengthChange,
   testID,
   variant = "dark",
+  showInfoIcon = false,
+  infoMessage = "Password must be at least 8 characters long and include 1 uppercase letter, 1 number, and 1 symbol.",
 }: PasswordInputProps) {
   /** Controls whether the password is visible */
   const [visible, setVisible] = useState(false);
@@ -83,12 +101,37 @@ export default function LabeledPasswordInput({
   /** Show indicator when enabled and the field is focused or has input */
   const showIndicator = showStrengthIndicator && (focused || value.length > 0);
 
+  const handleInfoPress = () => {
+    Alert.alert("Password Requirements", infoMessage);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.labelRow}>
-        <Text style={[styles.label, variant === "light" && styles.labelLight]}>
-          {label}
-        </Text>
+        <View style={styles.labelLeft}>
+          <Text
+            style={[styles.label, variant === "light" && styles.labelLight]}
+          >
+            {label}
+          </Text>
+
+          {showInfoIcon && (
+            <Pressable
+              onPress={handleInfoPress}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.infoIconButton,
+                { opacity: pressed ? 0.5 : 1 },
+              ]}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={18}
+                color={variant === "light" ? "#000" : COLORS.white}
+              />
+            </Pressable>
+          )}
+        </View>
 
         {showIndicator && (
           <PasswordStrengthIndicator strength={strength} visible={true} />
@@ -108,7 +151,6 @@ export default function LabeledPasswordInput({
           onChangeText={(text) => {
             onChangeText(text);
 
-            // Notify parent component when strength changes
             if (showStrengthIndicator && onStrengthChange) {
               const newStrength = getStrength(text);
               onStrengthChange(newStrength);
@@ -150,6 +192,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 5,
+    gap: 10,
+  },
+
+  labelLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 1,
   },
 
   label: {
@@ -158,9 +208,14 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.poppins,
   },
 
+  infoIconButton: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   inputWrapper: {
     width: "100%",
-    height: 50,
+    minHeight: 50,
     borderRadius: 10,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
@@ -168,7 +223,7 @@ const styles = StyleSheet.create({
 
   input: {
     width: "100%",
-    height: "100%",
+    minHeight: 50,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingRight: 45,

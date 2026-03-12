@@ -6,7 +6,7 @@
  * Features:
  * - View account information
  * - Display link code for receiver connection
- * - Manage registered receivers
+ * - Manage linked receivers
  * - Toggle notification preferences
  * - Handle sign-out and account deletion
  */
@@ -179,7 +179,7 @@ export default function SenderSettingsScreen() {
       Toast.show({
         type: "error",
         text1: "Connection Error",
-        text2: "Failed to load registered receivers",
+        text2: "Failed to load linked receivers",
         position: "top",
       });
     } finally {
@@ -337,7 +337,7 @@ export default function SenderSettingsScreen() {
       data: [{ type: "linkCodeCard" }],
     },
     {
-      title: "Registered Receivers",
+      title: "Linked Receivers",
       data: loadingReceivers
         ? [{ type: "loading" }]
         : receivers.length === 0
@@ -376,12 +376,12 @@ export default function SenderSettingsScreen() {
     if ("type" in item && item.type === "empty") {
       return (
         <View style={styles.emptyRow}>
-          <Text style={styles.emptyText}>No registered receivers yet</Text>
+          <Text style={styles.emptyText}>No linked receivers yet</Text>
         </View>
       );
     }
 
-    if (section.title === "Registered Receivers" && "name" in item) {
+    if (section.title === "Linked Receivers" && "name" in item) {
       return <ReceiverRow receiver={item} onUnlink={handleUnlinkReceiver} />;
     }
 

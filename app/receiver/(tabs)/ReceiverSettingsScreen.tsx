@@ -6,7 +6,7 @@
  * Responsibilities:
  * - Display account information (name and email)
  * - Link senders using a link code or QR scanner
- * - Display and manage registered senders
+ * - Display and manage linked senders
  * - Allow receivers to unlink senders
  * - Toggle notification preferences
  * - Sign out of the account
@@ -143,7 +143,7 @@ export default function ReceiverSettingsScreen() {
       Toast.show({
         type: "error",
         text1: "Connection Error",
-        text2: "Failed to load registered senders",
+        text2: "Failed to load linked senders",
         position: "top",
       });
     } finally {
@@ -328,7 +328,7 @@ export default function ReceiverSettingsScreen() {
       data: [{ type: "receiverLinkCode" }],
     },
     {
-      title: "Registered Senders",
+      title: "Linked Senders",
       data: loadingSenders
         ? [{ type: "loading" }]
         : senders.length === 0
@@ -367,12 +367,12 @@ export default function ReceiverSettingsScreen() {
     if ("type" in item && item.type === "empty") {
       return (
         <View style={styles.emptyRow}>
-          <Text style={styles.emptyText}>No registered senders yet</Text>
+          <Text style={styles.emptyText}>No linked senders yet</Text>
         </View>
       );
     }
 
-    if (section.title === "Registered Senders" && "name" in item) {
+    if (section.title === "Linked Senders" && "name" in item) {
       return <SenderRow sender={item} onUnlink={handleUnlinkSender} />;
     }
 
@@ -509,7 +509,7 @@ const ReceiverLinkCodeCard = ({
 
       <Pressable
         style={[styles.receiverPrimaryBtn, loading && { opacity: 0.7 }]}
-        onPress={onSubmit}
+        onPress={() => onSubmit()}
         disabled={loading}
       >
         {loading ? (

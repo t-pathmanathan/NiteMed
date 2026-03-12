@@ -162,7 +162,7 @@ export default function SenderHomeScreen() {
     }
 
     if (receivers.length === 0) {
-      return <Text style={styles.emptyText}>No registered receivers</Text>;
+      return <Text style={styles.emptyText}>No receivers linked yet.</Text>;
     }
 
     return (
@@ -173,6 +173,9 @@ export default function SenderHomeScreen() {
       />
     );
   };
+
+  const shouldShowCard =
+    !loading && isConfirmed !== null && receivers.length > 0;
 
   return (
     <ScrollView
@@ -186,7 +189,7 @@ export default function SenderHomeScreen() {
         />
       }
     >
-      <Text style={styles.header}>Check In</Text>
+      {shouldShowCard && <Text style={styles.header}>Check In</Text>}
 
       <View style={styles.cardContainer}>{renderContent()}</View>
     </ScrollView>

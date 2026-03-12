@@ -75,6 +75,10 @@ export default function ScanQRScreen() {
         onBarcodeScanned={handleBarcodeScanned}
       />
 
+      <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <Text style={styles.backText}>Cancel</Text>
+      </Pressable>
+
       <View style={styles.frameContainer}>
         <View style={styles.frame} />
         <Text style={styles.instruction}>Scan QR Code From Patient</Text>
@@ -145,5 +149,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
     textAlign: "center",
+  },
+  backButton: {
+    position: "absolute",
+    top: 60,
+    left: 20,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+
+  backText: {
+    color: "white",
+    fontWeight: "600",
   },
 });

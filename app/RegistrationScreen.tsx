@@ -138,6 +138,8 @@ export default function RegistrationScreen() {
         onChangeText={setPassword}
         showStrengthIndicator
         onStrengthChange={setPasswordStrength}
+        showInfoIcon
+        infoMessage="Password must be at least 8 characters long and include 1 uppercase letter, 1 number, and 1 symbol."
         testID="input_password"
       />
 
