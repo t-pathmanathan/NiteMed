@@ -8,8 +8,8 @@
  * - Authenticate user with the authentication API
  * - Persist login state locally
  * - Bootstrap the user profile
- * - Navigate to the appropriate home screen based on role
  * - Register device for push notifications (non-blocking)
+ * - Navigate to the appropriate home screen based on role
  */
 
 import { useRouter } from "expo-router";
@@ -26,88 +26,46 @@ import MainButton from "@/components/MainButton";
 import { signInApi } from "@/src/api/authApi";
 import { saveExpoPushToken } from "@/src/api/registerNotificationApi";
 import { bootstrapUserApi } from "@/src/api/userApi";
-
 import { registerPushNotifications } from "@/src/utils/registerPushNotifications";
 
 import { COLORS, FONTS } from "../theme";
 
-/**
- * Regex used to validate email input format.
- */
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/**
- * SecureStore key used to detect returning users.
- */
 const HAS_SIGNED_IN_KEY = "hasSignedInBefore";
 
 export default function LoginScreen() {
   const router = useRouter();
 
-  /**
-   * Form state
-   */
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  /**
-   * Loading state during authentication
-   */
   const [loading, setLoading] = useState(false);
 
-  /**
-   * Determine if login form is valid
-   */
   const isFormValid = emailRegex.test(email) && password.length > 0;
 
-  /**
-   * Handles the login process and session initialization.
-   */
   const handleSignIn = async () => {
     if (!isFormValid) return;
 
     setLoading(true);
 
     try {
-      /**
-       * Authenticate user
-       */
       await signInApi({
         email,
         password,
       });
 
-      /**
-       * Persist login indicator locally
-       */
       await SecureStore.setItemAsync(HAS_SIGNED_IN_KEY, "true");
 
-      /**
-       * Fetch user profile information
-       */
       const userProfile = await bootstrapUserApi();
 
       /**
-       * Navigate to role-specific home screen
-       */
-      if (userProfile.role === "takesMeds") {
-        router.replace("/sender/(tabs)/SenderHomeScreen");
-      } else if (userProfile.role === "tracksMeds") {
-        router.replace("/receiver/(tabs)/ReceiverHomeScreen");
-      } else {
-        throw new Error(`Invalid user role: ${userProfile?.role}`);
-      }
-
-      /**
-       * Register device for push notifications
-       * This should NOT block login if it fails
+       * Debug push registration BEFORE navigation
        */
       try {
         const token = await registerPushNotifications();
 
         if (token) {
           Toast.show({
-            type: "info",
+            type: "success",
             text1: "Push Token Generated",
             text2: token,
             position: "top",
@@ -139,6 +97,14 @@ export default function LoginScreen() {
           text2: message,
           position: "top",
         });
+      }
+
+      if (userProfile.role === "takesMeds") {
+        router.replace("/sender/(tabs)/SenderHomeScreen");
+      } else if (userProfile.role === "tracksMeds") {
+        router.replace("/receiver/(tabs)/ReceiverHomeScreen");
+      } else {
+        throw new Error(`Invalid user role: ${userProfile?.role}`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Sign-in failed";
