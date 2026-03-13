@@ -15,22 +15,18 @@ import * as Notifications from "expo-notifications";
  */
 export async function registerPushNotifications() {
   if (!Device.isDevice) {
-    console.log("Must use physical device for push notifications");
-    return null;
+    throw new Error("Must use a physical device for push notifications");
   }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
-  // Request permission if not already granted
   if (existingStatus !== "granted") {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
 
-  // Exit if permission is denied
   if (finalStatus !== "granted") {
-    console.log("Notification permission not granted");
     return null;
   }
 
@@ -42,9 +38,7 @@ export async function registerPushNotifications() {
     throw new Error("Missing EAS projectId for push notifications");
   }
 
-  // Retrieve the Expo push token for this device
   const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
 
-  console.log("Expo Push Token:", token);
   return token;
 }

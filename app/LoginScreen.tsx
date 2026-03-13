@@ -106,17 +106,41 @@ export default function LoginScreen() {
         const token = await registerPushNotifications();
 
         if (token) {
-          await saveExpoPushToken(token);
-          console.log("Push token saved successfully");
+          Toast.show({
+            type: "info",
+            text1: "Push Token Generated",
+            text2: token,
+            position: "top",
+          });
+
+          const result = await saveExpoPushToken(token);
+
+          Toast.show({
+            type: "success",
+            text1: "Push Token Saved",
+            text2: JSON.stringify(result),
+            position: "top",
+          });
         } else {
-          console.log("No Expo push token returned");
+          Toast.show({
+            type: "error",
+            text1: "Push Token Failed",
+            text2: "registerPushNotifications returned null",
+            position: "top",
+          });
         }
       } catch (pushError) {
-        console.log("Push notification setup failed:", pushError);
+        const message =
+          pushError instanceof Error ? pushError.message : "Unknown push error";
+
+        Toast.show({
+          type: "error",
+          text1: "Push Setup Error",
+          text2: message,
+          position: "top",
+        });
       }
     } catch (error) {
-      console.log("Login flow failed:", error);
-
       const message = error instanceof Error ? error.message : "Sign-in failed";
 
       Toast.show({
