@@ -7,9 +7,9 @@
  * - Collect login credentials
  * - Authenticate user with the authentication API
  * - Persist login state locally
- * - Register device for push notifications
  * - Bootstrap the user profile
  * - Navigate to the appropriate home screen based on role
+ * - Register device for push notifications (non-blocking)
  */
 
 import { useRouter } from "expo-router";
@@ -88,15 +88,6 @@ export default function LoginScreen() {
       const userProfile = await bootstrapUserApi();
 
       /**
-       * Register device for push notifications
-       */
-      const token = await registerPushNotifications();
-
-      if (token) {
-        await saveExpoPushToken(token);
-      }
-
-      /**
        * Navigate to role-specific home screen
        */
       if (userProfile.role === "takesMeds") {
@@ -104,9 +95,28 @@ export default function LoginScreen() {
       } else if (userProfile.role === "tracksMeds") {
         router.replace("/receiver/(tabs)/ReceiverHomeScreen");
       } else {
-        throw new Error("Invalid user role");
+        throw new Error(`Invalid user role: ${userProfile?.role}`);
       }
-    } catch (error: unknown) {
+
+      /**
+       * Register device for push notifications
+       * This should NOT block login if it fails
+       */
+      try {
+        const token = await registerPushNotifications();
+
+        if (token) {
+          await saveExpoPushToken(token);
+          console.log("Push token saved successfully");
+        } else {
+          console.log("No Expo push token returned");
+        }
+      } catch (pushError) {
+        console.log("Push notification setup failed:", pushError);
+      }
+    } catch (error) {
+      console.log("Login flow failed:", error);
+
       const message = error instanceof Error ? error.message : "Sign-in failed";
 
       Toast.show({

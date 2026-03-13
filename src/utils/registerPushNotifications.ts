@@ -5,6 +5,7 @@
  * retrieves the device's Expo push token.
  */
 
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 
@@ -13,14 +14,12 @@ import * as Notifications from "expo-notifications";
  * if registration succeeds.
  */
 export async function registerPushNotifications() {
-  // Push notifications only work on physical devices
   if (!Device.isDevice) {
     console.log("Must use physical device for push notifications");
     return null;
   }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
-
   let finalStatus = existingStatus;
 
   // Request permission if not already granted
@@ -35,10 +34,17 @@ export async function registerPushNotifications() {
     return null;
   }
 
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    Constants.easConfig?.projectId;
+
+  if (!projectId) {
+    throw new Error("Missing EAS projectId for push notifications");
+  }
+
   // Retrieve the Expo push token for this device
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
+  const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
 
-  console.log("📱 Expo Push Token:", token);
-
+  console.log("Expo Push Token:", token);
   return token;
 }
