@@ -50,6 +50,7 @@ export default {
       "expo-font",
       "expo-web-browser",
       "expo-secure-store",
+      "expo-notifications",
     ],
 
     experiments: {
