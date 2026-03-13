@@ -41,3 +41,11 @@ app-example
 # generated native folders
 /ios
 /android
+
+# amplify
+.amplify
+amplify_outputs*
+amplifyconfiguration*
+
+# firebase
+google-services.json

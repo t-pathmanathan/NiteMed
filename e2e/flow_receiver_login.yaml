@@ -1,0 +1,10 @@
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "input_email"
+- inputText: "thilochan.tech@gmail.com"
+- tapOn:
+    id: "input_password"
+- inputText: "ReceiverPass123!"
+- tapOn:
+    id: "btn_login"
