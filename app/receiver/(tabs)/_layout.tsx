@@ -1,5 +1,18 @@
+/**
+ * Receiver Tabs Layout
+ *
+ * Provides the bottom tab navigation for receiver users.
+ *
+ * Responsibilities:
+ * - Define the main receiver navigation tabs
+ * - Configure tab styling and animations
+ * - Provide icons for each tab
+ */
+
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
+
+const PRIMARY_RED = "#FD1101";
 
 export default function TabLayout() {
   return (
@@ -7,10 +20,10 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarActiveTintColor: "#FD1101",
+        tabBarActiveTintColor: PRIMARY_RED,
         tabBarInactiveTintColor: "#999",
 
-        // 👇 Add this for animation
+        // Tab transition animation
         animation: "shift",
 
         tabBarStyle: {
@@ -20,9 +33,12 @@ export default function TabLayout() {
           height: 80,
           paddingBottom: 10,
           paddingTop: 10,
+
+          // Floating pill style
           borderRadius: 20,
           marginHorizontal: 100,
           marginBottom: 20,
+
           position: "absolute",
           bottom: 25,
           left: 20,

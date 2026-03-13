@@ -1,11 +1,21 @@
+/**
+ * readMedicationApi
+ *
+ * Retrieves medication-related data for the receiver's home screen.
+ */
+
 import { fetchAuthSession } from "@aws-amplify/auth";
 
 const API_BASE_URL = "https://aagvjd6mke.execute-api.us-east-1.amazonaws.com";
 
+/**
+ * Fetches the receiver's home screen medication data.
+ */
 export async function getReceiverHome() {
   const session = await fetchAuthSession();
   const token = session.tokens?.idToken?.toString();
 
+  // Ensure the user is authenticated before making the request
   if (!token) {
     throw new Error("No auth token found");
   }
@@ -17,6 +27,7 @@ export async function getReceiverHome() {
     },
   });
 
+  // Handle API errors
   if (!res.ok) {
     const text = await res.text();
     console.error("Fetch receiver home failed:", text);

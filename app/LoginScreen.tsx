@@ -1,73 +1,120 @@
+/**
+ * LoginScreen
+ *
+ * Authenticates an existing user and initializes their session.
+ *
+ * Responsibilities:
+ * - Collect login credentials
+ * - Authenticate user with the authentication API
+ * - Persist login state locally
+ * - Register device for push notifications
+ * - Bootstrap the user profile
+ * - Navigate to the appropriate home screen based on role
+ */
+
+import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+import Toast from "react-native-toast-message";
+
 import LabeledGeneralInput from "@/components/LabeledGeneralInput";
 import LabeledPasswordInput from "@/components/LabeledPasswordInput";
 import MainButton from "@/components/MainButton";
 
 import { signInApi } from "@/src/api/authApi";
+import { saveExpoPushToken } from "@/src/api/registerNotificationApi";
 import { bootstrapUserApi } from "@/src/api/userApi";
 
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
-
-import * as SecureStore from "expo-secure-store";
-
-import { Checkbox } from "expo-checkbox";
-
-import { saveExpoPushToken } from "@/src/api/registerNotificationApi";
 import { registerPushNotifications } from "@/src/utils/registerPushNotifications";
 
 import { COLORS, FONTS } from "../theme";
 
+/**
+ * Regex used to validate email input format.
+ */
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * SecureStore key used to detect returning users.
+ */
+const HAS_SIGNED_IN_KEY = "hasSignedInBefore";
 
 export default function LoginScreen() {
   const router = useRouter();
 
+  /**
+   * Form state
+   */
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [rememberMe, setRememberMe] = useState(false);
+  /**
+   * Loading state during authentication
+   */
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Determine if login form is valid
+   */
   const isFormValid = emailRegex.test(email) && password.length > 0;
 
-  const navigateToHome = async () => {
-    const userProfile = await bootstrapUserApi();
-
-    if (userProfile.role === "takesMeds") {
-      router.replace("/sender/(tabs)/SenderHomeScreen");
-    } else if (userProfile.role === "tracksMeds") {
-      router.replace("/receiver/(tabs)/ReceiverHomeScreen");
-    } else {
-      throw new Error("Invalid user role");
-    }
-  };
-
+  /**
+   * Handles the login process and session initialization.
+   */
   const handleSignIn = async () => {
     if (!isFormValid) return;
 
     setLoading(true);
 
     try {
-      await signInApi({ email, password });
+      /**
+       * Authenticate user
+       */
+      await signInApi({
+        email,
+        password,
+      });
 
-      await SecureStore.setItemAsync("hasSignedInBefore", "true");
+      /**
+       * Persist login indicator locally
+       */
+      await SecureStore.setItemAsync(HAS_SIGNED_IN_KEY, "true");
 
-      await SecureStore.setItemAsync(
-        "rememberMe",
-        rememberMe ? "true" : "false",
-      );
+      /**
+       * Fetch user profile information
+       */
+      const userProfile = await bootstrapUserApi();
 
+      /**
+       * Register device for push notifications
+       */
       const token = await registerPushNotifications();
 
       if (token) {
         await saveExpoPushToken(token);
       }
 
-      await navigateToHome();
+      /**
+       * Navigate to role-specific home screen
+       */
+      if (userProfile.role === "takesMeds") {
+        router.replace("/sender/(tabs)/SenderHomeScreen");
+      } else if (userProfile.role === "tracksMeds") {
+        router.replace("/receiver/(tabs)/ReceiverHomeScreen");
+      } else {
+        throw new Error("Invalid user role");
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Sign-in failed";
-      Alert.alert("Error", message);
+
+      Toast.show({
+        type: "error",
+        text1: "Login Failed",
+        text2: message,
+        position: "top",
+      });
     } finally {
       setLoading(false);
     }
@@ -92,30 +139,17 @@ export default function LoginScreen() {
         testID="input_password"
       />
 
-      {/* Remember + Forgot */}
-      <View style={styles.optionsRow}>
-        <View style={styles.rememberContainer}>
-          <Checkbox
-            style={styles.checkbox}
-            value={rememberMe}
-            onValueChange={setRememberMe}
-            color={rememberMe ? "#FD1101" : undefined}
-            testID="checkbox_rememberMe"
-          />
-          <Text style={styles.rememberText}>Remember Me</Text>
-        </View>
-
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: "/ForgotPasswordScreen",
-              params: email ? { email } : undefined,
-            })
-          }
-        >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </Pressable>
-      </View>
+      <Pressable
+        style={styles.forgotPasswordContainer}
+        onPress={() =>
+          router.push({
+            pathname: "/ForgotPasswordScreen",
+            params: email ? { email } : undefined,
+          })
+        }
+      >
+        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+      </Pressable>
 
       <View style={styles.buttonContainer}>
         <MainButton
@@ -124,6 +158,18 @@ export default function LoginScreen() {
           disabled={!isFormValid || loading}
           testID="btn_login"
         />
+      </View>
+
+      <View style={styles.registerContainer}>
+        <Text style={styles.registerText}>
+          Don't have an account?{" "}
+          <Text
+            style={styles.registerLink}
+            onPress={() => router.replace("/RegistrationScreen")}
+          >
+            Register
+          </Text>
+        </Text>
       </View>
     </View>
   );
@@ -141,42 +187,40 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontFamily: FONTS.poppins,
     color: COLORS.white,
-    marginBottom: 80,
+    marginBottom: 100,
     marginTop: 70,
   },
 
-  optionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-
-    width: "90%", // align closer to input width
-    marginTop: -25, // removes awkward vertical gap
-  },
-
-  rememberContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  checkbox: {
-    borderColor: "white",
-  },
-
-  rememberText: {
-    marginLeft: 8,
-    color: COLORS.white,
-    fontFamily: FONTS.poppins,
-    fontSize: 14,
+  forgotPasswordContainer: {
+    alignSelf: "flex-end",
+    marginRight: 25,
   },
 
   forgotPasswordText: {
     color: COLORS.white,
     fontFamily: FONTS.poppins,
     fontSize: 14,
+    marginTop: -20,
   },
 
   buttonContainer: {
-    marginTop: 225,
+    marginTop: 25,
+  },
+
+  registerContainer: {
+    marginTop: -50,
+  },
+
+  registerText: {
+    color: COLORS.white,
+    fontFamily: FONTS.poppins,
+    fontSize: 14,
+  },
+
+  registerLink: {
+    color: COLORS.white,
+    fontFamily: FONTS.poppins,
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
 });

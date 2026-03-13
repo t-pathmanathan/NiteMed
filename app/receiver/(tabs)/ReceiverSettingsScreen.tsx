@@ -1,7 +1,23 @@
+/**
+ * ReceiverSettingsScreen
+ *
+ * Allows a receiver to manage their account and sender connections.
+ *
+ * Responsibilities:
+ * - Display account information (name and email)
+ * - Link senders using a link code or QR scanner
+ * - Display and manage linked senders
+ * - Allow receivers to unlink senders
+ * - Toggle notification preferences
+ * - Sign out of the account
+ * - Permanently delete the account
+ */
+
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { fetchUserAttributes, signOut } from "aws-amplify/auth";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +31,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 
 import { deleteAccountApi } from "@/src/api/deleteAccountApi";
 import { linkReceiverApi } from "@/src/api/linkApi";
@@ -88,7 +105,12 @@ export default function ReceiverSettingsScreen() {
           email: attrs.email ?? "Unknown",
         });
       } catch {
-        Alert.alert("Error", "Failed to load account info");
+        Toast.show({
+          type: "error",
+          text1: "Account Error",
+          text2: "Failed to load account information",
+          position: "top",
+        });
       } finally {
         setLoadingProfile(false);
       }
@@ -97,8 +119,12 @@ export default function ReceiverSettingsScreen() {
     loadProfile();
   }, []);
 
+  const handleOpenScanner = () => {
+    router.push("/(modals)/ScanQRScreen");
+  };
+
   // -----------------------------------------
-  // LOAD CONNECTIONS (Reusable)
+  // LOAD CONNECTIONS
   // -----------------------------------------
 
   const loadConnections = async () => {
@@ -114,14 +140,18 @@ export default function ReceiverSettingsScreen() {
         })),
       );
     } catch {
-      Alert.alert("Error", "Failed to load registered senders");
+      Toast.show({
+        type: "error",
+        text1: "Connection Error",
+        text2: "Failed to load linked senders",
+        position: "top",
+      });
     } finally {
       setLoadingSenders(false);
       setRefreshing(false);
     }
   };
 
-  // Initial load
   useEffect(() => {
     loadConnections();
   }, []);
@@ -135,8 +165,14 @@ export default function ReceiverSettingsScreen() {
       const res = await getNotificationPreference();
       setNotificationsEnabled(res.notificationsEnabled ?? true);
     } catch {
-      Alert.alert("Error", "Failed to load notification preference");
-      setNotificationsEnabled(true); // safe fallback
+      Toast.show({
+        type: "error",
+        text1: "Notification Error",
+        text2: "Failed to load notification preference",
+        position: "top",
+      });
+
+      setNotificationsEnabled(true);
     }
   };
 
@@ -152,28 +188,54 @@ export default function ReceiverSettingsScreen() {
   );
 
   // -----------------------------------------
+  // HANDLE SCANNED QR CODE
+  // -----------------------------------------
+
+  const { scannedCode } = useLocalSearchParams();
+
+  useEffect(() => {
+    if (scannedCode) {
+      const code = scannedCode as string;
+
+      setEnteredCode(code);
+      handleLinkSender(code);
+    }
+  }, [scannedCode]);
+
+  // -----------------------------------------
   // LINK HANDLER
   // -----------------------------------------
 
-  const handleLinkSender = async () => {
-    if (!enteredCode.trim()) {
-      Alert.alert("Error", "Please enter a link code");
+  const handleLinkSender = async (code?: string) => {
+    const finalCode = code ?? enteredCode;
+
+    if (!finalCode.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Missing Code",
+        text2: "Please enter a link code",
+        position: "top",
+      });
+
       return;
     }
 
     try {
       setLinking(true);
-      await linkReceiverApi(enteredCode.trim().toUpperCase());
-      Alert.alert("Success", "Sender linked successfully");
+
+      await linkReceiverApi(finalCode.trim().toUpperCase());
+
       setEnteredCode("");
 
       setLoadingSenders(true);
       await loadConnections();
     } catch (error) {
-      Alert.alert(
-        "Link Failed",
-        error instanceof Error ? error.message : "Something went wrong",
-      );
+      Toast.show({
+        type: "error",
+        text1: "Link Failed",
+        text2: error instanceof Error ? error.message : "Something went wrong",
+        position: "top",
+      });
     } finally {
       setLinking(false);
     }
@@ -182,22 +244,30 @@ export default function ReceiverSettingsScreen() {
   const handleUnlinkSender = async (senderId: string) => {
     try {
       await unlinkSenderApi(senderId);
-      await loadConnections(); // refresh instead of manual filtering
+      await loadConnections();
     } catch {
-      Alert.alert("Error", "Failed to unlink sender");
+      Toast.show({
+        type: "error",
+        text1: "Unlink Failed",
+        text2: "Failed to unlink sender",
+        position: "top",
+      });
     }
   };
 
   const handleToggleNotifications = async (value: boolean) => {
-    // Optimistically update UI first
     setNotificationsEnabled(value);
 
     try {
       await toggleNotification(value);
-    } catch (error) {
-      Alert.alert("Error", "Failed to update notification preference");
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Notification Error",
+        text2: "Failed to update notification preference",
+        position: "top",
+      });
 
-      // Revert UI if API fails
       setNotificationsEnabled(!value);
     }
   };
@@ -206,8 +276,13 @@ export default function ReceiverSettingsScreen() {
     try {
       await signOut({ global: true });
       router.replace("/LoginScreen");
-    } catch (error) {
-      console.error("Failed to sign out", error);
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Sign-Out Failed",
+        text2: "Failed to sign out",
+        position: "top",
+      });
     }
   };
 
@@ -217,7 +292,12 @@ export default function ReceiverSettingsScreen() {
       await signOut({ global: true });
       router.replace("/LoginScreen");
     } catch {
-      Alert.alert("Error", "Failed to delete account");
+      Toast.show({
+        type: "error",
+        text1: "Delete Failed",
+        text2: "Failed to delete account",
+        position: "top",
+      });
     }
   };
 
@@ -248,7 +328,7 @@ export default function ReceiverSettingsScreen() {
       data: [{ type: "receiverLinkCode" }],
     },
     {
-      title: "Registered Senders",
+      title: "Linked Senders",
       data: loadingSenders
         ? [{ type: "loading" }]
         : senders.length === 0
@@ -287,12 +367,12 @@ export default function ReceiverSettingsScreen() {
     if ("type" in item && item.type === "empty") {
       return (
         <View style={styles.emptyRow}>
-          <Text style={styles.emptyText}>No registered senders yet</Text>
+          <Text style={styles.emptyText}>No linked senders yet</Text>
         </View>
       );
     }
 
-    if (section.title === "Registered Senders" && "name" in item) {
+    if (section.title === "Linked Senders" && "name" in item) {
       return <SenderRow sender={item} onUnlink={handleUnlinkSender} />;
     }
 
@@ -300,8 +380,10 @@ export default function ReceiverSettingsScreen() {
       switch (item.type) {
         case "fullName":
           return <SettingRow label={userProfile?.fullName ?? ""} />;
+
         case "email":
           return <SettingRow label={userProfile?.email ?? ""} />;
+
         case "deleteAccount":
           return (
             <SettingRow
@@ -310,6 +392,7 @@ export default function ReceiverSettingsScreen() {
               right={<AntDesign name="delete" size={20} color="#FD1101" />}
             />
           );
+
         case "receiverLinkCode":
           return (
             <ReceiverLinkCodeCard
@@ -317,8 +400,10 @@ export default function ReceiverSettingsScreen() {
               onChangeCode={setEnteredCode}
               onSubmit={handleLinkSender}
               loading={linking}
+              onScanPress={handleOpenScanner}
             />
           );
+
         case "toggleNotifications":
           return (
             <SettingRow
@@ -334,6 +419,7 @@ export default function ReceiverSettingsScreen() {
               }
             />
           );
+
         case "signOut":
           return (
             <SettingRow
@@ -375,7 +461,7 @@ export default function ReceiverSettingsScreen() {
 }
 
 // -----------------------------------------
-// REUSABLE COMPONENTS (UNCHANGED)
+// REUSABLE COMPONENTS
 // -----------------------------------------
 
 type SettingRowProps = {
@@ -396,11 +482,13 @@ const ReceiverLinkCodeCard = ({
   onChangeCode,
   onSubmit,
   loading,
+  onScanPress,
 }: {
   enteredCode: string;
   onChangeCode: (t: string) => void;
   onSubmit: () => void;
   loading: boolean;
+  onScanPress: () => void;
 }) => (
   <View style={styles.receiverCard}>
     <TextInput
@@ -412,21 +500,29 @@ const ReceiverLinkCodeCard = ({
       autoCapitalize="characters"
       maxLength={9}
     />
+
     <View style={styles.receiverButtons}>
-      <Pressable style={styles.receiverScanBtn}>
+      <Pressable style={styles.receiverScanBtn} onPress={onScanPress}>
         <Feather name="camera" size={20} color="#FD1101" />
         <Text style={styles.receiverScanText}>Scan QR Code</Text>
       </Pressable>
 
       <Pressable
         style={[styles.receiverPrimaryBtn, loading && { opacity: 0.7 }]}
-        onPress={onSubmit}
+        onPress={() => onSubmit()}
         disabled={loading}
       >
         {loading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.receiverPrimaryText}>Submit / Link Sender</Text>
+          <View style={styles.linkContent}>
+            <MaterialIcons
+              name="connect-without-contact"
+              size={24}
+              color="white"
+            />
+            <Text style={styles.receiverPrimaryText}>Link</Text>
+          </View>
         )}
       </Pressable>
     </View>
@@ -455,7 +551,7 @@ const SenderRow = ({
 );
 
 // -----------------------------------------
-// STYLES (UNCHANGED)
+// STYLES
 // -----------------------------------------
 
 const styles = StyleSheet.create({
@@ -524,6 +620,14 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  linkContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    gap: 6,
+    marginRight: 20,
   },
   receiverName: { fontSize: 16, fontWeight: "500" },
   loadingRow: { backgroundColor: "white", padding: 20, alignItems: "center" },
