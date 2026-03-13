@@ -169,13 +169,10 @@ export default function SenderHomeScreen() {
       <MedicationConfirmCard
         onConfirm={handleConfirm}
         onCancel={handleCancel}
-        initialConfirmed={isConfirmed}
+        initialConfirmed={isConfirmed ?? false}
       />
     );
   };
-
-  const shouldShowCard =
-    !loading && isConfirmed !== null && receivers.length > 0;
 
   return (
     <ScrollView
@@ -189,7 +186,7 @@ export default function SenderHomeScreen() {
         />
       }
     >
-      {shouldShowCard && <Text style={styles.header}>Check In</Text>}
+      <Text style={styles.header}>Check In</Text>
 
       <View style={styles.cardContainer}>{renderContent()}</View>
     </ScrollView>
