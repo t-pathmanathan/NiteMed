@@ -8,7 +8,7 @@
  * - Authenticate user with the authentication API
  * - Persist login state locally
  * - Bootstrap the user profile
- * - Register device for push notifications (non-blocking)
+ * - Register device for push notifications
  * - Navigate to the appropriate home screen based on role
  */
 
@@ -30,99 +30,79 @@ import { registerPushNotifications } from "@/src/utils/registerPushNotifications
 
 import { COLORS, FONTS } from "../theme";
 
+/**
+ * Regex used to validate email input format.
+ */
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * SecureStore key used to detect returning users.
+ */
 const HAS_SIGNED_IN_KEY = "hasSignedInBefore";
 
 export default function LoginScreen() {
   const router = useRouter();
 
+  /**
+   * Form state
+   */
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  /**
+   * Loading state during authentication
+   */
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Determine if login form is valid
+   */
   const isFormValid = emailRegex.test(email) && password.length > 0;
 
+  /**
+   * Handles the login process and session initialization.
+   */
   const handleSignIn = async () => {
     if (!isFormValid) return;
 
     setLoading(true);
 
     try {
+      /**
+       * Authenticate user
+       */
       await signInApi({
         email,
         password,
       });
 
+      /**
+       * Persist login indicator locally
+       */
       await SecureStore.setItemAsync(HAS_SIGNED_IN_KEY, "true");
 
+      /**
+       * Fetch user profile information
+       */
       const userProfile = await bootstrapUserApi();
 
       /**
-       * Debug push registration BEFORE navigation
+       * Register device for push notifications.
+       * This should not block login if it fails.
        */
       try {
         const token = await registerPushNotifications();
 
-        if (!token) {
-          Toast.show({
-            type: "error",
-            text1: "Push Token Failed",
-            text2: "registerPushNotifications returned null",
-            position: "top",
-            visibilityTime: 6000,
-            autoHide: false,
-          });
-        } else {
-          Toast.show({
-            type: "success",
-            text1: "Push Token Generated",
-            text2: token,
-            position: "top",
-            visibilityTime: 4000,
-          });
-
-          try {
-            const result = await saveExpoPushToken(token);
-
-            Toast.show({
-              type: "success",
-              text1: "Push Token Saved",
-              text2: JSON.stringify(result),
-              position: "top",
-              visibilityTime: 4000,
-            });
-          } catch (saveError) {
-            const saveMessage =
-              saveError instanceof Error
-                ? saveError.message
-                : JSON.stringify(saveError);
-
-            Toast.show({
-              type: "error",
-              text1: "Save Token Error",
-              text2: saveMessage,
-              position: "top",
-              visibilityTime: 6000,
-              autoHide: false,
-            });
-          }
+        if (token) {
+          await saveExpoPushToken(token);
         }
       } catch (pushError) {
-        const message =
-          pushError instanceof Error
-            ? pushError.message
-            : JSON.stringify(pushError);
-
-        Toast.show({
-          type: "error",
-          text1: "Register Push Error",
-          text2: message,
-          position: "top",
-          visibilityTime: 6000,
-          autoHide: false,
-        });
+        console.log("Push notification setup failed:", pushError);
       }
 
+      /**
+       * Navigate to role-specific home screen
+       */
       if (userProfile.role === "takesMeds") {
         router.replace("/sender/(tabs)/SenderHomeScreen");
       } else if (userProfile.role === "tracksMeds") {

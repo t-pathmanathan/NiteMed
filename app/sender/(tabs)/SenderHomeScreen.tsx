@@ -11,7 +11,7 @@
  * - Support pull-to-refresh and screen focus refresh
  */
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -60,11 +60,20 @@ export default function SenderHomeScreen() {
    */
   const [isConfirmed, setIsConfirmed] = useState<boolean | null>(null);
 
+  /**
+   * Prevent overlapping data loads from racing each other.
+   */
+  const isLoadingRef = useRef(false);
+
   // -----------------------------------------
   // LOAD DASHBOARD DATA
   // -----------------------------------------
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (isLoadingRef.current) return;
+
+    isLoadingRef.current = true;
+
     try {
       const [receiverRes, confirmationRes] = await Promise.all([
         getMyReceivers(),
@@ -83,16 +92,10 @@ export default function SenderHomeScreen() {
         position: "top",
       });
     } finally {
+      isLoadingRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  /**
-   * Load data when screen first mounts
-   */
-  useEffect(() => {
-    loadData();
   }, []);
 
   /**
@@ -101,7 +104,7 @@ export default function SenderHomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, []),
+    }, [loadData]),
   );
 
   /**
@@ -169,7 +172,7 @@ export default function SenderHomeScreen() {
       <MedicationConfirmCard
         onConfirm={handleConfirm}
         onCancel={handleCancel}
-        initialConfirmed={isConfirmed ?? false}
+        initialConfirmed={isConfirmed}
       />
     );
   };

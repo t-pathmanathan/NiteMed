@@ -14,22 +14,37 @@ import * as Notifications from "expo-notifications";
  * if registration succeeds.
  */
 export async function registerPushNotifications() {
+  /**
+   * Push notifications require a physical device.
+   */
   if (!Device.isDevice) {
     throw new Error("Must use a physical device for push notifications");
   }
 
+  /**
+   * Check existing notification permissions.
+   */
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
+  /**
+   * Request permission if not already granted.
+   */
   if (existingStatus !== "granted") {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
 
+  /**
+   * Exit early if the user does not grant permission.
+   */
   if (finalStatus !== "granted") {
     return null;
   }
 
+  /**
+   * Resolve the EAS project ID required for standalone builds.
+   */
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ??
     Constants.easConfig?.projectId;
@@ -38,6 +53,9 @@ export async function registerPushNotifications() {
     throw new Error("Missing EAS projectId for push notifications");
   }
 
+  /**
+   * Retrieve the Expo push token for this device.
+   */
   const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
 
   return token;
