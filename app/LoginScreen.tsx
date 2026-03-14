@@ -63,39 +63,63 @@ export default function LoginScreen() {
       try {
         const token = await registerPushNotifications();
 
-        if (token) {
-          Toast.show({
-            type: "success",
-            text1: "Push Token Generated",
-            text2: token,
-            position: "top",
-          });
-
-          const result = await saveExpoPushToken(token);
-
-          Toast.show({
-            type: "success",
-            text1: "Push Token Saved",
-            text2: JSON.stringify(result),
-            position: "top",
-          });
-        } else {
+        if (!token) {
           Toast.show({
             type: "error",
             text1: "Push Token Failed",
             text2: "registerPushNotifications returned null",
             position: "top",
+            visibilityTime: 6000,
+            autoHide: false,
           });
+        } else {
+          Toast.show({
+            type: "success",
+            text1: "Push Token Generated",
+            text2: token,
+            position: "top",
+            visibilityTime: 4000,
+          });
+
+          try {
+            const result = await saveExpoPushToken(token);
+
+            Toast.show({
+              type: "success",
+              text1: "Push Token Saved",
+              text2: JSON.stringify(result),
+              position: "top",
+              visibilityTime: 4000,
+            });
+          } catch (saveError) {
+            const saveMessage =
+              saveError instanceof Error
+                ? saveError.message
+                : JSON.stringify(saveError);
+
+            Toast.show({
+              type: "error",
+              text1: "Save Token Error",
+              text2: saveMessage,
+              position: "top",
+              visibilityTime: 6000,
+              autoHide: false,
+            });
+          }
         }
       } catch (pushError) {
         const message =
-          pushError instanceof Error ? pushError.message : "Unknown push error";
+          pushError instanceof Error
+            ? pushError.message
+            : JSON.stringify(pushError);
 
         Toast.show({
           type: "error",
-          text1: "Push Setup Error",
+          text1: "Register Push Error",
           text2: message,
           position: "top",
+          visibilityTime: 6000,
+          autoHide: false,
         });
       }
 

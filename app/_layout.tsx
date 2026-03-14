@@ -73,7 +73,9 @@ const toastConfig: ToastConfig = {
       text2Style={{
         fontSize: 14,
         color: "#333",
+        flexWrap: "wrap",
       }}
+      text2NumberOfLines={6}
     />
   ),
 
